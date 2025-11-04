@@ -1,0 +1,808 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Satisfactory-Solver</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/modern-normalize/modern-normalize.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Base styles -->
+  <style>
+    :root{
+      /* Satisfactory-inspired palette */
+      --bg: #0b0e13;         /* page background (near black/charcoal) */
+      --card: #141a22;       /* panel/cards */
+      --card-2: #0f141b;     /* darker striping/headers */
+      --text: #e6ebf3;       /* primary text */
+      --muted: #9aa6b8;      /* secondary text */
+      --border: #1e2632;     /* borders / outlines */
+      --accent: #ffd200;     /* FICSIT yellow */
+      --accent-2: #ffeb80;   /* lighter yellow for hovers */
+      --focus: #61dafb22;    /* soft cyan focus ring */
+    }
+
+    html, body { background: var(--bg); color: var(--text); }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif; margin: 1rem auto; max-width: min(95vw, 1300px); }
+
+    header { margin: 1rem 0 1.25rem; }
+    header h1 {
+      font-family: Rajdhani, Inter, system-ui, sans-serif;
+      font-weight: 700; letter-spacing: .04em; margin: 0;
+      display: inline-flex; align-items: center; gap: .6rem;
+    }
+    header .badge {
+      font-size: .75rem; font-weight: 700; color: #111; background: var(--accent);
+      padding: .18rem .45rem; border-radius: .25rem;
+    }
+
+    .tabs { display: flex; gap: .5rem; margin: .75rem 0 1rem; flex-wrap: wrap; }
+    .tabs button {
+      padding: .55rem .8rem; border: 1px solid var(--border);
+      background: linear-gradient(180deg, #0f141b 0%, #0c1117 100%);
+      color: var(--muted); border-radius: .4rem; cursor: pointer;
+      position: relative; font-weight: 600; letter-spacing: .02em;
+    }
+    .tabs button:hover { color: var(--text); border-color: #2a3545; }
+    .tabs button.active {
+      color: #111; background: var(--accent); border-color: #c8a900;
+      box-shadow: 0 0 0 2px #111 inset;
+    }
+
+    .section {
+      background: var(--card); border: 1px solid var(--border);
+      padding: 1rem; margin: 1rem 0; border-radius: .6rem;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+    h2, h3 { font-family: Rajdhani, Inter, system-ui, sans-serif; letter-spacing: .04rem; margin: .1rem 0 .75rem; }
+
+    .grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .grid th {
+      text-align: left; color: var(--text);
+      background: var(--card-2); border-bottom: 1px solid var(--border);
+      padding: .45rem .5rem; font-weight: 600;
+    }
+    .grid td { border-bottom: 1px solid var(--border); padding: .45rem .5rem; vertical-align: middle; }
+    .grid th, .grid td { overflow: hidden; text-overflow: ellipsis; }
+
+    /* Inputs look tighter / more industrial */
+    input[type="number"], input[type="text"], select {
+      background: #0d1218; color: var(--text);
+      border: 1px solid var(--border); border-radius: .4rem; padding: .35rem .5rem;
+      outline: none;
+    }
+    input[type="number"]:focus, input[type="text"]:focus, select:focus {
+      box-shadow: 0 0 0 3px var(--focus);
+      border-color: #2a3a4f;
+    }
+    .compact-num { width: 12ch; }
+
+    /* Row actions aligned perfectly with inputs */
+    .row-actions { display: flex; gap: .5rem; justify-content: flex-start; align-items: center; }
+    .row-actions .btn { line-height: 1; padding: .45rem .7rem; }
+
+    .hidden { display: none; }
+    .dim { color: var(--muted); font-style: italic; }
+
+    .controls { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .controls input[type="text"]{ padding:.35rem .5rem; border:1px solid var(--border); border-radius:.4rem; background:#0d1218; color:var(--text); }
+    .controls select, .controls button { padding:.5rem .7rem; }
+
+    .btn, .controls button, .row-actions button, #runBtn {
+      background: linear-gradient(180deg, var(--accent) 0%, #e2b300 100%);
+      color: #111; border: 1px solid #c9a300; border-radius: .5rem; cursor: pointer;
+      font-weight: 500; letter-spacing: .04em;
+    }
+    .btn:hover, .controls button:hover, .row-actions button:hover, #runBtn:hover {
+      filter: brightness(1.02);
+    }
+    .btn-disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
+
+    /* Link-like minimal button (for inline Logout) */
+    .linkish {
+      background: none !important; border: 0 !important; padding: 0;
+      color: var(--accent-2); text-decoration: underline; cursor: pointer; font: inherit;
+    }
+
+    footer { margin: 1.25rem 0 2rem; color: var(--muted); }
+    footer a { color: var(--accent-2); }
+
+    #authHint a { color: var(--accent-2); text-decoration: underline; }
+    #authHint a:hover { filter: brightness(1.1); }
+
+    /* Reserve space in first rows when no Remove button is shown */
+    .row-actions-spacer { display: inline-block; width: 110px; height: 32px; }
+
+    input[type="checkbox"] { accent-color: #ffd84d; }
+    
+    #outputsTable td:nth-child(3) { text-align: center; }
+
+    /* Weights: 3-column grid like IO */
+    .weights-grid{
+      display: grid;
+      grid-template-columns: 220px 15ch 24px 1fr; /* label | control | icon | flexible spacer */
+      align-items: center;
+      column-gap: .5rem;
+    }
+    .weights-grid .center-control{ justify-self: center; }
+    .weights-grid .info-placeholder{ width: 24px; height: 1px; display: inline-block; }
+
+    /* Tooltip chip + custom tooltip */
+    .info {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid var(--accent);
+      color: #111;
+      background: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: help;
+      user-select: none;
+      vertical-align: middle;
+    }
+    .info:hover::after {
+      content: attr(data-info);
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 8px);
+      transform: translateX(-50%);
+      background: var(--card-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: .5rem .75rem;
+      border-radius: .4rem;
+      width: max-content;
+      max-width: 360px;
+      white-space: pre-line;
+      box-shadow: 0 4px 10px rgba(185,185,185,.4);
+      font-size: 13px;
+      line-height: 1.3;
+      z-index: 20;
+    }
+
+    /* Resources grid to place a small button next to inputs */
+    .resources-grid{
+      display: grid;
+      grid-template-columns: 220px 15ch 28px 1fr; /* label | input | button | spacer */
+      align-items: center;
+      column-gap: .5rem;
+    }
+    .reset-btn{
+      width: 24px;
+      height: 24px;
+      border-radius: .4rem;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #1a2330 0%, #121821 100%);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .reset-btn:hover{ border-color:#2a3545; filter: brightness(1.08); }
+    .reset-btn:disabled{ opacity:.45; cursor:not-allowed; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Satisfactory Optimizer <span class="badge">SATISFACTORY-SOLVER.COM</span></h1>
+  </header>
+
+  <div class="tabs">
+    <button id="tabbtn-Resources" class="active" onclick="setActiveTab('Resources')">Resources</button>
+    <button id="tabbtn-Weights" onclick="setActiveTab('Weights')">Weights</button>
+    <button id="tabbtn-IO" onclick="setActiveTab('IO')">Inputs/Outputs</button>
+    <button id="tabbtn-Recipes" onclick="setActiveTab('Recipes')">Recipes</button>
+    <button id="tabbtn-Results" onclick="setActiveTab('Results')">Results</button>
+  </div>
+
+  <div id="tab-Resources" class="section"></div>
+  <div id="tab-Weights" class="section hidden"></div>
+
+  <div id="tab-IO" class="section hidden">
+    <div class="two-col">
+      <div>
+        <h3>Inputs</h3>
+        <table class="grid" id="inputsTable">
+          <thead>
+            <tr>
+              <th style="width:50%">Item</th>
+              <th style="width:15%">Amount</th>
+              <th style="width:15%"></th>
+              <th class="actions" style="width:17%"></th>
+            </tr>
+          </thead>
+          <tbody id="inputsBody"></tbody>
+        </table>
+        <div class="controls"><button type="button" onclick="addRow('inputs')">+ Add Input</button></div>
+        <p class="dim">Input items from other factories.</p>
+      </div>
+      <div>
+        <h3>Outputs</h3>
+        <table class="grid" id="outputsTable">
+          <thead>
+            <tr>
+              <th style="width:50%">Item</th>
+              <th style="width:15%">Amount</th>
+              <th style="width:15%">Maximize</th>
+              <th class="actions" style="width:17%"></th>
+            </tr>
+          </thead>
+          <tbody id="outputsBody"></tbody>
+        </table>
+        <div class="controls"><button type="button" onclick="addRow('outputs')">+ Add Output</button></div>
+        <p class="dim">Desired outputs to optimize for.<br>Check “Maximize” to maximize for that item.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-Recipes" class="section hidden"></div>
+
+  <div id="tab-Results" class="section hidden">
+    <div class="controls" style="margin-bottom:.75rem">
+      <button id="runBtn" type="button" onclick="optimize()">Run Optimization</button>
+      <span style="margin-left:1rem"></span>
+      <input type="text" id="saveName" placeholder="Settings name…" />
+      <button id="saveBtn" type="button" onclick="saveCurrent()">Save</button>
+      <select id="loadSelect"></select>
+      <button id="loadBtn" type="button" class="btn-disabled" title="Login & select a preset" onclick="loadSelected()">Load</button>
+      <button id="deleteBtn" type="button" class="btn-disabled" title="Login & select a preset" onclick="deleteSelected()">Delete</button>
+      <button type="button" onclick="resetDefaults()">Reset to Defaults</button>
+    </div>
+    <p class="dim" id="authHint"></p>
+    <div id="result" class="section" style="margin-top:1rem;"></div>
+  </div>
+
+  <footer>
+    Updated for <a href="https://www.satisfactorygame.com/" target="_blank" rel="noopener">Satisfactory</a> 1.0.
+    Created by <a href="https://www.reddit.com/user/wrigh516/submitted/" target="_blank" rel="noopener">/u/wrigh516</a>.
+    GitHub source <a href="https://github.com/Scott1903/satisfactory-solver" target="_blank" rel="noopener">here</a>.
+  </footer>
+
+  <script>
+  // ----------------- STATE -----------------
+  let activeTab = 'Resources';
+
+  let resourceLimits = {};
+  let defaultResourceLimits = {}; // <— model defaults for the ↺ buttons
+
+  let weights = {};
+  let inputs = {};
+  let outputs = {};
+  let checkboxNuclearWaste = false;
+  let maxItem = null; // settings.max_item
+
+  let itemsIndex = {};
+  let resourcesIndex = {};
+  let recipes = [];
+  let recipeToggles = {}; // id -> boolean
+
+  let _newIn = 0, _newOut = 0;
+
+  // Weights tooltip text
+  const weightInfo = {
+    'Power Use': 'Penalty for power used.\n\nThe total MW of power used to produce output.\n\nNuclear: 1 MW ≈ 0.088 resources scaled w/o shards\nFuel: 1 MW ≈ 0.040 resources scaled w/o shards\nCoal: 1 MW ≈ 0.13 resources scaled w/o shards\n\nRecommended: 0.1 (resource optimal), 0.3 (simplify infrastructure)',
+    'Item Use': 'Penalty for items to belt.\n\nSum of all items produced/recycled.\n\n≥ 0.4 removes screw recipes.\n\nRecommended: 0 (resource optimal), 0.4 (simplify production)',
+    'Building Use': 'Penalty for machine count.\n\nTotal miners, smelters, assemblers, etc.\n\nRecommended: 0; use buildings_scaled instead.',
+    'Resource Use': 'Penalty for raw resource use.\n\nAll resources scaled equally.\n\nRecommended: 0; use resources_scaled instead.',
+    'Buildings Scaled': 'Penalty for complex machines.\n\nFormula: ((#in + #out - 1)^1.58)/3 * count\n\n1 Manufacturer = 3 Assemblers = 9 Constructors\n≥ 10 favors Smelters\n\nRecommended: 0 (resource optimal), 30 (simplify production)',
+    'Resources Scaled': 'Penalty for rare resource use.\n\nResources scaled by user limits.\n\nSet high limit for Water to avoid penalty.\n\nRecommended: 1',
+    'Nuclear Waste': 'Penalty for unsunk Nuclear Waste.\n\nRecommended: 9999999 (very high)',
+    'Plutonium Sink': 'Checkbox forces Ficsonium route recycling of Plutonium Fuel Rods'
+  };
+
+  // ----------------- CSRF + LOGOUT (POST + refresh) -----------------
+  function getCookie(name){
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  async function logoutCurrentUser(){
+    try{
+      const csrftoken = getCookie('csrftoken');
+      await fetch('/accounts/logout/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({ next: window.location.pathname }).toString()
+      });
+    }catch(e){ console.warn('Logout failed:', e); }
+    finally{ window.location.reload(); }
+  }
+
+  // ----------------- TABS -----------------
+  function setActiveTab(name){
+    activeTab = name;
+    ['Resources','Weights','IO','Recipes','Results'].forEach(tab => {
+      const b = document.getElementById('tabbtn-' + tab);
+      const d = document.getElementById('tab-' + tab);
+      if (b) b.classList.toggle('active', tab === name);
+      if (d) d.classList.toggle('hidden', tab !== name);
+    });
+    render();
+  }
+
+  // ----------------- RENDER DISPATCH -----------------
+  function render(){
+    renderResources();
+    renderWeights();
+    renderIO();
+    renderRecipes();
+  }
+
+  // ----------------- RESOURCES -----------------
+  function renderResources(){
+    if (activeTab !== 'Resources') return;
+    const host = document.getElementById('tab-Resources');
+    host.innerHTML = `<h3>Local Resource Limits</h3>`;
+    const keys = Object.keys(resourceLimits||{});
+    if (!keys.length){
+      host.insertAdjacentHTML('beforeend','<p class="dim">No resource limits.</p>');
+      return;
+    }
+
+    keys.sort((a,b) => (resourcesIndex[a]||a).localeCompare(resourcesIndex[b]||b))
+        .forEach(k => {
+          const v = resourceLimits[k] ?? 0;
+          const row = document.createElement('div'); row.className='section';
+          row.style.padding='.5rem .75rem';
+
+          const defVal = Object.prototype.hasOwnProperty.call(defaultResourceLimits, k)
+            ? defaultResourceLimits[k]
+            : null;
+
+          row.innerHTML = `
+            <div class="resources-grid">
+              <label>${(resourcesIndex[k]||k)}</label>
+              <input type="number" step="1" value="${v}" class="compact-num res-input" data-key="${k}">
+              <button type="button"
+                      class="reset-btn"
+                      data-key="${k}"
+                      title="${defVal === null ? 'No model default available' : 'Set to map maximum'}"
+                      ${defVal === null ? 'disabled' : ''}>↺</button>
+              <!-- flexible spacer -->
+            </div>`;
+
+          const inputEl = row.querySelector('.res-input');
+          const btnEl   = row.querySelector('.reset-btn');
+
+          inputEl.addEventListener('input', (e) => {
+            const val = e.target.value;
+            resourceLimits[k] = (val === '' ? 0 : parseFloat(val));
+          });
+
+          if (btnEl) {
+            btnEl.addEventListener('click', () => {
+              const dv = defaultResourceLimits[k];
+              if (dv === undefined || dv === null) return;
+              resourceLimits[k] = dv;
+              inputEl.value = dv;
+            });
+          }
+
+          host.appendChild(row);
+        });
+
+    host.insertAdjacentHTML('beforeend','<p class="dim">Resources Scaled weighs Resources by the inverse of these values.\
+    <br>Set Water to high value (99999999) to make it negligible.\
+    <br>Set it to double Iron, for example, to make it weighted half as much as Iron.</p>');
+  }
+
+  // ----------------- WEIGHTS -----------------
+  function renderWeights(){
+    if (activeTab !== 'Weights') return;
+    const host = document.getElementById('tab-Weights');
+    host.innerHTML = `<h3>Weights</h3>`;
+
+    const keys = Object.keys(weights||{});
+    if (!keys.length){
+      host.insertAdjacentHTML('beforeend','<p class="dim">No weights.</p>');
+    } else {
+      keys.forEach(k => {
+        const v = weights[k] ?? 0;
+        const infoText = (weightInfo[k] || '');
+        const row = document.createElement('div'); row.className='section';
+        row.style.padding='.5rem .75rem';
+        row.innerHTML = `
+          <div class="weights-grid">
+            <label>${k}</label>
+            <input type="number" step="0.01" value="${v}" class="compact-num">
+            ${
+              infoText
+                ? `<span class="info" data-info="${escapeHtmlForTitle(infoText)}">i</span>`
+                : `<span class="info-placeholder"></span>`
+            }
+            <!-- spacer -->
+          </div>`;
+        row.querySelector('input').addEventListener('input', e => {
+          const val = e.target.value; weights[k] = val===''?0:parseFloat(val);
+        });
+        host.appendChild(row);
+      });
+    }
+
+    const c = document.createElement('div'); c.className='section'; c.style.padding='.5rem .75rem';
+    const nwInfo = (weightInfo['Plutonium Sink'] || '');
+    c.innerHTML = `
+      <div class="weights-grid">
+        <label>Force Ficsonium Recycling</label>
+        <input id="chkNW" type="checkbox" class="center-control" ${checkboxNuclearWaste ? 'checked' : ''} />
+        <span class="info" data-info="${escapeHtmlForTitle(nwInfo)}">i</span>
+      </div>`;
+    c.querySelector('#chkNW').addEventListener('change', e => { checkboxNuclearWaste = !!e.target.checked; });
+    host.appendChild(c);
+
+    host.insertAdjacentHTML('beforeend','<p class="dim">These configs control the optimization objective weights.\
+    <br>You may customize the objective to your own goals, instead of only minimizing resource use.</p>');
+  }
+
+  // Escape tooltip text for safe use in data-info
+  function escapeHtmlForTitle(s){
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ----------------- IO -----------------
+  function renderIO(){
+    if (activeTab !== 'IO') return;
+
+    // Inputs
+    const inBody = document.getElementById('inputsBody');
+    inBody.innerHTML = '';
+    let inKeys = Object.keys(inputs || {});
+    if (inKeys.length === 0) {
+      const k = '__new_in_' + (++_newIn);
+      inputs[k] = 0; inKeys = [k];
+    }
+    inKeys.forEach((k, idx) => renderInputRow(k, idx === 0)); // first row no Remove
+
+    // Outputs
+    const outBody = document.getElementById('outputsBody');
+    outBody.innerHTML = '';
+    let outKeys = Object.keys(outputs || {});
+    if (outKeys.length === 0) {
+      const k = '__new_out_' + (++_newOut);
+      outputs[k] = 0; outKeys = [k];
+    }
+    outKeys.forEach((k, idx) => renderOutputRow(k, idx === 0)); // first row: Max Item? & no Remove
+
+    syncMaxItemWithFirstOutput();
+  }
+
+  function renderInputRow(key, isFirst){
+    const tr = document.createElement('tr');
+    const amount = inputs[key] ?? 0;
+    tr.innerHTML = `
+      <td>${itemSelect('in', key)}</td>
+      <td><input type="number" step="0.01" value="${isNaN(amount)?0:amount}"></td>
+      <td></td>  <!-- spacer to mirror Maximize column -->
+      <td class="row-actions">${isFirst ? '<span class="row-actions-spacer"></span>' : '<button type="button" class="btn rm">Remove</button>'}</td>
+    `;
+    let currentKey = key;
+    const sel = tr.querySelector('select');
+    const amt = tr.querySelector('input[type="number"]');
+    const rm = tr.querySelector('.rm');
+
+    sel.addEventListener('change', e => {
+      const newKey = e.target.value;
+      if (!newKey) { if (!isFirst) { delete inputs[currentKey]; renderIO(); } return; }
+      const val = inputs[currentKey] ?? 0;
+      if (newKey !== currentKey) { delete inputs[currentKey]; inputs[newKey] = val; currentKey = newKey; }
+      renderIO();
+    });
+    amt.addEventListener('input', e => { inputs[currentKey] = parseFloat(e.target.value || 0); });
+    if (rm) rm.addEventListener('click', () => { delete inputs[currentKey]; renderIO(); });
+
+    document.getElementById('inputsBody').appendChild(tr);
+  }
+
+  function renderOutputRow(key, isFirst){
+    const tr = document.createElement('tr');
+    const amount = outputs[key] ?? 0;
+    tr.innerHTML = `
+      <td>${itemSelect('out', key)}</td>
+      <td><input type="number" step="0.01" value="${isNaN(amount)?0:amount}"></td>
+      <td>${isFirst ? '<input type="checkbox" id="maxItemChk">' : ''}</td>
+      <td class="row-actions">${isFirst ? '<span class="row-actions-spacer"></span>' : '<button type="button" class="btn rm">Remove</button>'}</td>
+    `;
+    let currentKey = key;
+    const sel = tr.querySelector('select');
+    const amt = tr.querySelector('input[type="number"]');
+    const rm = tr.querySelector('.rm');
+    const chk = tr.querySelector('#maxItemChk');
+
+    sel.addEventListener('change', e => {
+      const newKey = e.target.value;
+      if (!newKey) { if (!isFirst) { delete outputs[currentKey]; renderIO(); } return; }
+      const val = outputs[currentKey] ?? 0;
+      if (newKey !== currentKey) {
+        delete outputs[currentKey]; outputs[newKey] = val;
+        if (isFirst && maxItem === currentKey) maxItem = newKey;
+        currentKey = newKey;
+      }
+      renderIO();
+    });
+    amt.addEventListener('input', e => { outputs[currentKey] = parseFloat(e.target.value || 0); });
+    if (rm) rm.addEventListener('click', () => { delete outputs[currentKey]; renderIO(); });
+    if (chk) {
+      chk.checked = (maxItem && currentKey === maxItem);
+      chk.addEventListener('change', e => { if (e.target.checked) maxItem = currentKey; else if (maxItem === currentKey) maxItem = null; });
+    }
+
+    document.getElementById('outputsBody').appendChild(tr);
+  }
+
+  function addRow(kind){
+    if (kind === 'inputs'){ const k = '__new_in_' + (++_newIn); inputs[k] = 0; }
+    else if (kind === 'outputs'){ const k = '__new_out_' + (++_newOut); outputs[k] = 0; }
+    renderIO();
+  }
+
+  function itemSelect(kind, selected){
+    const opts = Object.entries(itemsIndex||{})
+      .map(([id,name]) => `<option value="${id}" ${id===selected?'selected':''}>${name}</option>`)
+      .sort((a,b)=>a.localeCompare(b));
+    return `<select><option value="">Select item</option>${opts.join('')}</select>`;
+  }
+
+  function syncMaxItemWithFirstOutput(){
+    const keys = Object.keys(outputs||{});
+    if (!keys.length){ maxItem=null; return; }
+    if (maxItem && !outputs.hasOwnProperty(maxItem)){ maxItem=null; }
+  }
+
+  // ----------------- RECIPES -----------------
+  function renderRecipes(){
+    if (activeTab !== 'Recipes') return;
+    const host = document.getElementById('tab-Recipes');
+    const alt = (recipes||[]).filter(r => (r.display||'').includes('Alternate'));
+    const def = (recipes||[]).filter(r => !(r.display||'').includes('Alternate'));
+    const block = (arr, title) => `
+      <div>
+        <h3>${title}</h3>
+        <div class="recipes-list">
+          ${arr.map(r => `
+            <div>
+              <input type="checkbox" data-id="${r.id}" ${recipeToggles[r.id]?'checked':''}>
+              <label>${r.display || r.name || r.id}</label>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    host.innerHTML = `<div class="two-col">${block(alt,'Alternate Recipes')}${block(def,'Default Recipes')}</div>`;
+    host.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.addEventListener('change', e => { recipeToggles[e.target.dataset.id] = !!e.target.checked; });
+    });
+  }
+
+  // ----------------- SAVE / LOAD / DELETE / RESET -----------------
+  function updateLoadButtons() {
+    const id = document.getElementById('loadSelect').value;
+    const loadBtn = document.getElementById('loadBtn');
+    const delBtn  = document.getElementById('deleteBtn');
+    if (id) {
+      loadBtn.classList.remove('btn-disabled'); delBtn.classList.remove('btn-disabled');
+      loadBtn.removeAttribute('title'); delBtn.removeAttribute('title');
+    } else {
+      loadBtn.classList.add('btn-disabled'); delBtn.classList.add('btn-disabled');
+      loadBtn.setAttribute('title','Login & select a preset'); delBtn.setAttribute('title','Login & select a preset');
+    }
+  }
+
+  async function refreshSavedList(){
+    try{
+      const res = await fetch('/api/saved-settings/');
+      const list = await res.json();
+      const sel = document.getElementById('loadSelect');
+      const prior = sel.value || '';
+      sel.innerHTML = '<option value="">Load settings…</option>' + list
+        .map(it => `<option value="${it.id}">${it.name} (updated ${it.updated_at})</option>`).join('');
+      if (prior && [...sel.options].some(o => o.value === String(prior))) sel.value = prior; else sel.value = '';
+      updateLoadButtons();
+    }catch(e){ console.warn('Failed to load saved settings list:', e); }
+  }
+
+  function currentSettings(){
+    const cleanInputs = {};
+    for (const [k,v] of Object.entries(inputs||{})){ if (!k.startsWith('__new_')) cleanInputs[k]=v; }
+    const cleanOutputs = {};
+    for (const [k,v] of Object.entries(outputs||{})){ if (!k.startsWith('__new_')) cleanOutputs[k]=v; }
+    const recipes_off = Object.entries(recipeToggles||{}).filter(([_,on]) => !on).map(([id])=>id);
+    return {
+      resource_limits: resourceLimits,
+      weights,
+      inputs: cleanInputs,
+      outputs: cleanOutputs,
+      recipes_off,
+      max_item: maxItem || false,
+      "checkbox_Nuclear Waste": checkboxNuclearWaste
+    };
+  }
+
+  async function saveCurrent(){
+    try{
+      const name = document.getElementById('saveName').value.trim();
+      if (!name){ alert('Please enter a name for these settings.'); return; }
+      const settings = currentSettings();
+      const res = await fetch('/api/saved-settings/', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name, settings })
+      });
+      if (!res.ok){ const t = await res.text(); throw new Error(t || 'Save failed'); }
+      await refreshSavedList();
+      alert('Saved!');
+    }catch(e){ alert('Could not save: ' + e.message); }
+  }
+
+  async function loadSelected(){
+    const sel = document.getElementById('loadSelect');
+    const id = sel.value;
+    if (!id) return;
+    const res = await fetch('/api/saved-settings/load?id='+encodeURIComponent(id));
+    if (!res.ok){ alert('Load failed'); return; }
+    const s = await res.json();
+    applySettings(s);
+    if (activeTab === 'Results') { await optimize(); setActiveTab('Results'); } else { setActiveTab('IO'); }
+  }
+
+  async function deleteSelected(){
+    const sel = document.getElementById('loadSelect');
+    const id = sel.value;
+    if (!id){ return; }
+    const text = sel.options[sel.selectedIndex].textContent || 'this preset';
+    if (!confirm(`Delete "${text}"?\nThis cannot be undone.`)) return;
+
+    try {
+      let resp = await fetch(`/api/saved-settings/${encodeURIComponent(id)}/`, { method: 'DELETE' });
+      if (!resp.ok) resp = await fetch(`/api/saved-settings/delete?id=${encodeURIComponent(id)}`, { method: 'POST' });
+      if (!resp.ok) { const t = await resp.text(); throw new Error(t || 'Delete failed'); }
+      sel.value = ''; updateLoadButtons(); await refreshSavedList(); alert('Deleted.');
+    } catch (e) {
+      alert('Could not delete: ' + e.message);
+    }
+  }
+
+  async function resetDefaults(){
+    const res = await fetch('/api/default-settings/');
+    const d = await res.json();
+    applySettings(d);
+    if (activeTab === 'Results') { await optimize(); setActiveTab('Results'); } else { setActiveTab('IO'); }
+  }
+
+  function applySettings(s){
+    resourceLimits = s.resource_limits || {};
+    weights = s.weights || {};
+    inputs = s.inputs || {};
+    outputs = s.outputs || {};
+    checkboxNuclearWaste = !!s["checkbox_Nuclear Waste"];
+    maxItem = s.max_item || null;
+
+    const off = new Set(s.recipes_off || []);
+    recipeToggles = {};
+    (recipes||[]).forEach(r => recipeToggles[r.id] = !off.has(r.id));
+    render();
+  }
+
+  // ----------------- OPTIMIZE -----------------
+  async function optimize(){
+    try{
+      const settings = currentSettings();
+      const resp = await fetch('/optimize/', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ settings })
+      });
+      if(!resp.ok){
+        const text = await resp.text(); throw new Error(text.slice(0,400));
+      }
+      const data = await resp.json();
+      setActiveTab('Results'); renderResults(data);
+      refreshSavedList();
+    }catch(e){
+      setActiveTab('Results');
+      document.getElementById('result').innerHTML =
+        `<div class="section"><h3>Optimization Error</h3><pre>${String(e).replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</pre></div>`;
+    }
+  }
+
+  // ----------------- RESULTS -----------------
+  function renderResults(result){
+    const host = document.getElementById('result');
+    if(!result || result.error){ host.innerHTML = `<p>${result?.error || 'No result'}</p>`; return; }
+    const fmt = (v) => (typeof v === 'number' ? Number(v).toFixed(1) : v);
+    const section = (title, obj) => {
+      if (!obj || !Object.keys(obj).length) return '';
+      const entries = Object.entries(obj);
+      return `<div class="section"><h3>${title}</h3>
+        <ul>${entries.map(([k,v])=>{
+          if (v && typeof v==='object' && !Array.isArray(v)){
+            const inner = Object.entries(v).map(([kk,vv])=>`<li>${kk}: ${fmt(vv)}</li>`).join('');
+            return `<li><strong>${k}:</strong><ul>${inner}</ul></li>`;
+          }
+          return `<li><strong>${k}:</strong> ${fmt(v)}</li>`;
+        }).join('')}</ul></div>`;
+    };
+    host.innerHTML = `
+      <div class="section"><h3>Overview</h3>
+        <ul>
+          <li><strong>Sink Points:</strong> ${fmt(result.sink_points)}</li>
+          <li><strong>Power Use:</strong> ${fmt(result.power_use)}</li>
+          <li><strong>Power Produced:</strong> ${fmt(result.power_produced)}</li>
+          <li><strong>Item Use:</strong> ${fmt(result.item_use)}</li>
+          <li><strong>Buildings:</strong> ${fmt(result.buildings)}</li>
+          <li><strong>Resources:</strong> ${fmt(result.resources)}</li>
+          <li><strong>Buildings Scaled:</strong> ${fmt(result.buildings_scaled)}</li>
+          <li><strong>Resources Scaled:</strong> ${fmt(result.resources_scaled)}</li>
+        </ul></div>
+      ${section('Items Input', result.items_input)}
+      ${section('Items Output', result.items_output)}
+      ${section('Resources Needed', result.resources_needed)}
+      ${section('Items Needed', result.items_needed)}
+      ${section('Recipes Used', result.recipes_used)}
+      ${section('Ingredients Map', result.ingredients_map)}
+      ${section('Products Map', result.products_map)}
+    `;
+  }
+
+  // ----------------- BOOTSTRAP -----------------
+  (async function bootstrap(){
+    try{
+      const [defaultsRes, metaRes] = await Promise.all([
+        fetch('/api/default-settings/'), fetch('/api/metadata/')
+      ]);
+      const [defaults, meta] = await Promise.all([defaultsRes.json(), metaRes.json()]);
+
+      // indexes
+      (meta.resources||[]).forEach(r => resourcesIndex[r.id] = r.name || r.id);
+      (meta.items||[]).forEach(i => itemsIndex[i.id] = i.name || i.id);
+      recipes = (meta.recipes||[]).slice().sort((a,b)=>(a.name||a.display||a.id).localeCompare(b.name||b.display||b.id));
+
+      // keep a copy of the model defaults for Resources ↺ buttons
+      defaultResourceLimits = { ...(defaults.resource_limits || {}) };
+
+      // apply defaults to state/UI
+      applySettings(defaults);
+
+      // Session → toggle Save/Load/Delete, and render inline Logout button
+      const sessionRes = await fetch('/api/session/');
+      const session = await sessionRes.json();
+      const authed = !!session.authenticated;
+
+      const saveInput = document.getElementById('saveName');
+      const saveBtn   = document.getElementById('saveBtn');
+      const loadSel   = document.getElementById('loadSelect');
+      const loadBtn   = document.getElementById('loadBtn');
+      const delBtn    = document.getElementById('deleteBtn');
+      const hint      = document.getElementById('authHint');
+
+      if (!authed) {
+        if (saveInput) saveInput.disabled = true;
+        if (saveBtn)   { saveBtn.disabled = true; saveBtn.title = 'Login to save presets'; }
+        if (loadSel)   loadSel.disabled = true;
+        if (loadBtn)   { loadBtn.disabled = true; loadBtn.title = 'Login to load presets'; }
+        if (delBtn)    { delBtn.disabled = true; delBtn.title = 'Login to delete presets'; }
+        if (hint) hint.innerHTML = `Not logged in.  <a href="/accounts/login/?next=/">Sign in</a> to save or load presets.`;
+      } else {
+        if (hint) {
+          hint.innerHTML = `Logged in as <strong>${session.username}</strong>.  <button id="logoutBtn" type="button" class="linkish">Log out</button>`;
+          const btn = document.getElementById('logoutBtn');
+          if (btn) btn.addEventListener('click', logoutCurrentUser);
+        }
+        await refreshSavedList();
+        loadSel.addEventListener('change', updateLoadButtons);
+        updateLoadButtons();
+      }
+
+    }catch(e){
+      console.warn('Bootstrap failed:', e);
+    }finally{
+      setActiveTab('Resources');
+    }
+  })();
+  </script>
+</body>
+</html>

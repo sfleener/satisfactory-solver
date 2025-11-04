@@ -1,0 +1,122 @@
+{% load static %}
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Create account</title>
+
+  <!-- Match index.html -->
+  <link rel="stylesheet" href="https://unpkg.com/modern-normalize/modern-normalize.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b0e13; --card:#141a22; --card-2:#0f141b;
+      --text:#e6ebf3; --muted:#9aa6b8; --border:#1e2632;
+      --accent:#ffd200; --accent-2:#ffeb80; --focus:#61dafb22;
+    }
+
+    html,body{background:var(--bg);color:var(--text)}
+    body{
+      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif;
+      margin:0; min-height:100vh; display:grid; place-items:center; padding:1rem;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:.6rem;
+      padding:1.5rem;
+      width:min(520px, 92vw);
+      box-shadow:0 10px 24px rgba(0,0,0,.25);
+    }
+
+    h2{
+      font-family:Rajdhani,Inter,system-ui,sans-serif;
+      letter-spacing:.04em; margin-top:0; margin-bottom:.75rem;
+    }
+
+    a{color:var(--accent-2);text-decoration:underline}
+    a:hover{filter:brightness(1.1)}
+
+    label{display:block;margin-bottom:.35rem;font-weight:600}
+    .row{margin:.75rem 0}
+
+    input[type="text"], input[type="email"], input[type="password"]{
+      width:100%; padding:.45rem .6rem;
+      background:#0d1218; color:var(--text);
+      border:1px solid var(--border); border-radius:.4rem; outline:none;
+    }
+    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus{
+      box-shadow:0 0 0 3px var(--focus);
+      border-color:#2a3a4f;
+    }
+
+    .btn{
+      width:100%; padding:.6rem .8rem; border-radius:.5rem;
+      background:linear-gradient(180deg,var(--accent) 0%,#e2b300 100%);
+      color:#111; border:1px solid #c9a300; cursor:pointer;
+      font-weight:600; letter-spacing:.03em;
+    }
+    .btn:hover{filter:brightness(1.02)}
+
+    .help{color:var(--muted);font-size:.9rem;margin-top:.35rem}
+    .err{background:var(--card-2);border:1px solid #4a1c1c;color:#ffb4b4;padding:.6rem .75rem;border-radius:.4rem;margin:.5rem 0 1rem}
+    ul.errorlist{list-style:none;padding:0;margin:.35rem 0 0 0}
+    ul.errorlist li{color:#ffb4b4;font-size:.95rem;margin:.25rem 0}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Create account</h2>
+
+    {% if form.non_field_errors %}
+      <div class="err">
+        {% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="row">
+        {{ form.username.label_tag }}
+        {{ form.username }}
+        {{ form.username.errors }}
+        <div class="help">Letters, digits and @/./+/-/_ only. Must be unique.</div>
+      </div>
+
+      <div class="row">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {{ form.email.errors }}
+      </div>
+
+      <div class="row">
+        {{ form.password1.label_tag }}
+        {{ form.password1 }}
+        {{ form.password1.errors }}
+        <div class="help">
+          Use a strong password. It can’t be too similar to your username, too common, or too short (Django’s validators apply).
+        </div>
+      </div>
+
+      <div class="row">
+        {{ form.password2.label_tag }}
+        {{ form.password2 }}
+        {{ form.password2.errors }}
+        <div class="help">Repeat the same password as above.</div>
+      </div>
+
+      <div class="row">
+        <button class="btn" type="submit">Sign up</button>
+      </div>
+    </form>
+
+    <p><a href="{% url 'login' %}">Already have an account? Sign in</a></p>
+    <p><a href="/">← Back to app</a></p>
+  </div>
+</body>
+</html>
