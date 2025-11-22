@@ -1,9 +1,9 @@
 use crate::data::{RawData, Settings};
-use crate::solver::create_model;
 use good_lp::{Solution, SolverModel};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+use crate::solver::PreparedModel;
 
 mod data;
 mod solver;
@@ -21,48 +21,16 @@ fn main() -> eyre::Result<()> {
     settings
         .outputs
         .insert("Desc_SpaceElevatorPart_3_C".to_string(), 2.5);
+    
+    settings.floor_resource_limits(1e-5);
 
     let data = BufReader::new(File::open("../ui/data/data.json")?);
     let data: RawData = serde_json::from_reader(data)?;
 
-    let (model, variables) = create_model(&data, &mut settings);
+    let solved = PreparedModel::new(&data, &mut settings).solve()?;
+    let values = solved.into_values(&settings, &data);
 
-    let result = model.solve()?;
-
-    let status = result.status();
-    println!("status: {status:?}");
-
-    let power_use = result.value(variables.power_use);
-    let inputs = variables
-        .inputs
-        .into_iter()
-        .map(|(k, var)| (k, result.value(var)))
-        .filter(|(_, v)| *v > 0.001)
-        .collect::<HashMap<_, _>>();
-    let outputs = variables
-        .outputs
-        .into_iter()
-        .map(|(k, var)| (k, result.value(var)))
-        .filter(|(_, v)| *v > 0.001)
-        .collect::<HashMap<_, _>>();
-    let items = variables
-        .items
-        .into_iter()
-        .map(|(k, var)| (k, result.value(var)))
-        .filter(|(_, v)| *v > 0.001)
-        .collect::<HashMap<_, _>>();
-    let recipes = variables
-        .recipes
-        .into_iter()
-        .map(|(k, var)| (k, result.value(var)))
-        .filter(|(_, v)| *v > 0.001)
-        .collect::<HashMap<_, _>>();
-
-    println!("power: {power_use}");
-    println!("inputs: {inputs:?}");
-    println!("outputs: {outputs:?}");
-    println!("items: {items:?}");
-    println!("recipes: {recipes:?}");
+    println!("{values:#?}");
 
     Ok(())
 }

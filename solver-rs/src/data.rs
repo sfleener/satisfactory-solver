@@ -16,6 +16,16 @@ pub struct Settings {
     pub integer_recipes: bool,
 }
 
+impl Settings {
+    pub fn floor_resource_limits(&mut self, floor: f64) {
+        for v in self.resource_limits.values_mut() {
+            if *v < floor {
+                *v = floor;
+            }
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Weights {
