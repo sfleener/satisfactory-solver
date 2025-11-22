@@ -27,6 +27,7 @@ class UiConfig(AppConfig):
                     outputs=raw.get("outputs", {}),
                     max_item=raw.get("max_item") or None,
                     checkbox_Nuclear_Waste=raw.get("checkbox_Nuclear Waste", False),
+                    integer_recipes=raw.get("integer_recipes", True),
                 )
         except (OperationalError, ProgrammingError):
             # migrations not yet run

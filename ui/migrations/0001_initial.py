@@ -22,6 +22,7 @@ class Migration(migrations.Migration):
                 ('outputs', models.JSONField(default=dict)),
                 ('max_item', models.CharField(blank=True, max_length=128, null=True)),
                 ('checkbox_Nuclear_Waste', models.BooleanField(default=False)),
+                ('integer_recipes', models.BooleanField(default=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
             ],
         ),

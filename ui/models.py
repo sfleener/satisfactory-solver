@@ -9,6 +9,7 @@ class DefaultSettings(models.Model):
     outputs = models.JSONField(blank=True, null=True, default=None)
     max_item = models.CharField(max_length=128, blank=True, null=True)
     checkbox_Nuclear_Waste = models.BooleanField(default=False)
+    integer_recipes = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

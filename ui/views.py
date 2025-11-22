@@ -48,6 +48,7 @@ def default_settings(request):
             outputs=payload.get("outputs", {}),
             max_item=payload.get("max_item", False),
             checkbox_Nuclear_Waste=payload.get("checkbox_Nuclear Waste", False),
+            integer_recipes=payload.get("integer_recipes", True),
         )
 
     payload = {
@@ -58,6 +59,7 @@ def default_settings(request):
         "outputs": obj.outputs,
         "max_item": obj.max_item,
         "checkbox_Nuclear Waste": obj.checkbox_Nuclear_Waste,
+        "integer_recipes": obj.integer_recipes,
     }
     return JsonResponse(payload)
 
@@ -78,6 +80,7 @@ def optimize(request):
     settings.setdefault("outputs", {})
     settings.setdefault("max_item", False)
     settings["checkbox_Nuclear Waste"] = bool(settings.get("checkbox_Nuclear Waste", False))
+    settings.setdefault("integer_recipes", bool(settings.get("integer_recipes", True)))
 
     from .optimizer.main import optimize_production
     result = optimize_production(GAME_DATA, settings)

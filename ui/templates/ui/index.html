@@ -279,6 +279,7 @@
   let inputs = {};
   let outputs = {};
   let checkboxNuclearWaste = false;
+  let checkboxIntegerRecipes = true;
   let maxItem = null; // settings.max_item
 
   let itemsIndex = {};
@@ -297,7 +298,8 @@
     'Buildings Scaled': 'Penalty for complex machines.\n\nFormula: ((#in + #out - 1)^1.58)/3 * count\n\n1 Manufacturer = 3 Assemblers = 9 Constructors\n≥ 10 favors Smelters\n\nRecommended: 0 (resource optimal), 30 (simplify production)',
     'Resources Scaled': 'Penalty for rare resource use.\n\nResources scaled by user limits.\n\nSet high limit for Water to avoid penalty.\n\nRecommended: 1',
     'Nuclear Waste': 'Penalty for unsunk Nuclear Waste.\n\nRecommended: 9999999 (very high)',
-    'Plutonium Sink': 'Checkbox forces Ficsonium route recycling of Plutonium Fuel Rods'
+    'Plutonium Sink': 'Checkbox forces Ficsonium route recycling of Plutonium Fuel Rods',
+    'Integer Recipes': 'Checkbox forces whole number of recipes to be used.\n\nUseful for using the excess output of a factory to replenish stores'
   };
 
   // ----------------- CSRF + LOGOUT (POST + refresh) -----------------
@@ -428,16 +430,27 @@
       });
     }
 
-    const c = document.createElement('div'); c.className='section'; c.style.padding='.5rem .75rem';
+    const nwc = document.createElement('div'); nwc.className='section'; nwc.style.padding='.5rem .75rem';
     const nwInfo = (weightInfo['Plutonium Sink'] || '');
-    c.innerHTML = `
+      nwc.innerHTML = `
       <div class="weights-grid">
         <label>Force Ficsonium Recycling</label>
         <input id="chkNW" type="checkbox" class="center-control" ${checkboxNuclearWaste ? 'checked' : ''} />
         <span class="info" data-info="${escapeHtmlForTitle(nwInfo)}">i</span>
       </div>`;
-    c.querySelector('#chkNW').addEventListener('change', e => { checkboxNuclearWaste = !!e.target.checked; });
-    host.appendChild(c);
+      nwc.querySelector('#chkNW').addEventListener('change', e => { checkboxNuclearWaste = !!e.target.checked; });
+    host.appendChild(nwc);
+
+    const irc = document.createElement('div'); irc.className='section'; irc.style.padding='.5rem .75rem';
+    const irInfo = (weightInfo['Integer Recipes'] || '');
+    irc.innerHTML = `
+    <div class="weights-grid">
+      <label>Integer Recipes</label>
+      <input id="chkIR" type="checkbox" class="center-control" ${checkboxIntegerRecipes ? 'checked' : ''} />
+      <span class="info" data-info="${escapeHtmlForTitle(irInfo)}">i</span>
+    </div>`;
+    irc.querySelector('#chkIR').addEventListener('change', e => { checkboxIntegerRecipes = !!e.target.checked; });
+    host.appendChild(irc);
 
     host.insertAdjacentHTML('beforeend','<p class="dim">These configs control the optimization objective weights.\
     <br>You may customize the objective to your own goals, instead of only minimizing resource use.</p>');
@@ -620,7 +633,8 @@
       outputs: cleanOutputs,
       recipes_off,
       max_item: maxItem || false,
-      "checkbox_Nuclear Waste": checkboxNuclearWaste
+      "checkbox_Nuclear Waste": checkboxNuclearWaste,
+      integer_recipes: checkboxIntegerRecipes
     };
   }
 
@@ -681,6 +695,7 @@
     outputs = s.outputs || {};
     checkboxNuclearWaste = !!s["checkbox_Nuclear Waste"];
     maxItem = s.max_item || null;
+    integerRecipes = s.integer_recipes || null;
 
     const off = new Set(s.recipes_off || []);
     recipeToggles = {};

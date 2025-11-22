@@ -39,5 +39,6 @@
     "inputs": {},
     "outputs": {},
     "max_item": false,
-    "checkbox_Nuclear Waste": false
+    "checkbox_Nuclear Waste": false,
+    "integer_recipes": true
 }

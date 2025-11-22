@@ -13,11 +13,14 @@ def extract_items(data):
 
     return resources, recipes, products, ingredients
 
-def define_variables(m, all_items, recipes):
+def define_variables(m, settings, all_items, recipes):
     m.n = Var(all_items, within=NonNegativeReals)  # Input Items
     m.x = Var(all_items, within=NonNegativeReals)  # Output Items
     m.i = Var(all_items, within=NonNegativeReals)  # Intermediate items
-    m.r = Var(recipes, within=NonNegativeIntegers)  # Amount of each recipe used
+    if settings['integer_recipes']:
+        m.r = Var(recipes, within=NonNegativeIntegers)  # Amount of each recipe used
+    else:
+        m.r = Var(recipes, within=NonNegativeReals)  # Amount of each recipe used
 
     # Variables for objective cost
     m.power_use = Var(within=NonNegativeReals)
@@ -165,7 +168,7 @@ def create_model(data, settings):
     m.c = ConstraintList()
 
     resources, recipes, products, ingredients = extract_items(data)
-    define_variables(m, resources.union(products, ingredients), recipes)
+    define_variables(m, settings, resources.union(products, ingredients), recipes)
     fix_input_amounts(m, settings, resources.union(products, ingredients))
     fix_output_amounts(m, settings)
     add_product_constraints(m, products, data)
