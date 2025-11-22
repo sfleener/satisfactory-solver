@@ -7,5 +7,7 @@ edition = "2024"
 eyre = "0.6"
 good_lp = { version = "1", default-features = false, features = ["highs"] }
 itertools = "0.14"
+lasso = "0.7"
+petgraph = "0.8"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"

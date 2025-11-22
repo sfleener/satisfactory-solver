@@ -1,16 +1,90 @@
-use serde::{Deserialize, Serialize};
+use lasso::Spur;
+use serde::de::{Error, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
 
-#[derive(Serialize, Deserialize, Debug)]
+thread_local! {
+    static INTERNER: RefCell<lasso::Rodeo> = RefCell::new(lasso::Rodeo::new());
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub(crate) struct Key(Spur);
+
+impl<'de> Deserialize<'de> for Key {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct FieldVisitor;
+
+        impl Visitor<'_> for FieldVisitor {
+            type Value = Key;
+
+            fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+                formatter.write_str("string")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(v.into())
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Visitor::visit_str(self, &v)
+            }
+        }
+
+        deserializer.deserialize_string(FieldVisitor)
+    }
+}
+
+impl Key {
+    pub fn new_static(s: &'static str) -> Self {
+        Self(INTERNER.with(|l| l.borrow_mut().get_or_intern_static(s)))
+    }
+}
+
+impl Debug for Key {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+impl Display for Key {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        INTERNER.with(|l| f.write_str(l.borrow().resolve(&self.0)))
+    }
+}
+
+impl From<String> for Key {
+    fn from(value: String) -> Self {
+        Self(INTERNER.with(|l| l.borrow_mut().get_or_intern(value)))
+    }
+}
+
+impl From<&str> for Key {
+    fn from(value: &str) -> Self {
+        Self(INTERNER.with(|l| l.borrow_mut().get_or_intern(value)))
+    }
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Settings {
     pub phase: Option<u8>,
-    pub resource_limits: HashMap<String, f64>,
+    pub resource_limits: HashMap<Key, f64>,
     pub weights: Weights,
-    pub recipes_off: HashSet<String>,
-    pub inputs: HashMap<String, f64>,
-    pub outputs: HashMap<String, f64>,
+    pub recipes_off: HashSet<Key>,
+    pub inputs: HashMap<Key, f64>,
+    pub outputs: HashMap<Key, f64>,
     pub max_item: Option<serde_json::Value>,
     #[serde(rename = "checkbox_Nuclear Waste")]
     pub force_nuclear_waste: bool,
@@ -27,7 +101,7 @@ impl Settings {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Weights {
     #[serde(rename = "Power Use")]
@@ -46,12 +120,12 @@ pub struct Weights {
     pub nuclear_waste: f64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Data {
-    pub items: HashMap<String, Arc<Item>>,
-    pub resources: HashMap<String, Arc<Resource>>,
-    pub recipes: HashMap<String, Recipe>,
-    pub machines: HashMap<String, Arc<Machine>>,
+    pub items: HashMap<Key, Arc<Item>>,
+    pub resources: HashMap<Key, Arc<Resource>>,
+    pub recipes: HashMap<Key, Arc<Recipe>>,
+    pub machines: HashMap<Key, Arc<Machine>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -83,7 +157,7 @@ pub struct Resource {
     pub points: f64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Recipe {
     pub name: String,
@@ -94,10 +168,10 @@ pub struct Recipe {
     pub power_use: f64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct RecipeItem {
-    pub item: String,
+    pub item: Key,
     pub amount: f64,
 }
 

@@ -1,9 +1,9 @@
 use crate::data::{Data, Settings};
+use crate::solver::PreparedModel;
 use good_lp::{Solution, SolverModel};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-use crate::solver::PreparedModel;
 
 mod data;
 mod solver;
@@ -14,13 +14,13 @@ fn main() -> eyre::Result<()> {
 
     settings
         .outputs
-        .insert("Desc_SpaceElevatorPart_1_C".to_string(), 5.0);
+        .insert("Desc_SpaceElevatorPart_1_C".into(), 6.0);
     settings
         .outputs
-        .insert("Desc_SpaceElevatorPart_2_C".to_string(), 5.0);
+        .insert("Desc_SpaceElevatorPart_2_C".into(), 5.0);
     settings
         .outputs
-        .insert("Desc_SpaceElevatorPart_3_C".to_string(), 2.5);
+        .insert("Desc_SpaceElevatorPart_3_C".into(), 2.5);
     settings.phase = Some(2);
 
     settings.floor_resource_limits(1e-5);

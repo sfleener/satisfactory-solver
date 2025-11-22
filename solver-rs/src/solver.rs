@@ -1,23 +1,25 @@
-use crate::data::{Data, Form, Item, Recipe, Settings};
+use crate::data::{Data, Form, Key, Settings};
 use eyre::bail;
-use good_lp::solvers::highs::{HighsProblem, HighsSolution};
+use good_lp::solvers::highs::HighsProblem;
 use good_lp::{
     Constraint, Expression, ProblemVariables, Solution, SolutionStatus, SolverModel, Variable,
     constraint, default_solver, variable,
 };
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use petgraph::data::Build;
+use petgraph::dot::Dot;
+use petgraph::graph::DiGraph;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter::Sum;
-use std::sync::Arc;
 
 type PreparedProblem = HighsProblem;
 
 struct Keys {
-    resources: HashSet<String>,
-    recipes: HashSet<String>,
-    products: HashSet<String>,
-    ingredients: HashSet<String>,
-    all_items: HashSet<String>,
+    resources: HashSet<Key>,
+    recipes: HashSet<Key>,
+    products: HashSet<Key>,
+    ingredients: HashSet<Key>,
+    all_items: HashSet<Key>,
 }
 
 fn extract_items(raw_data: &Data) -> Keys {
@@ -60,10 +62,10 @@ fn extract_items(raw_data: &Data) -> Keys {
 }
 
 pub struct Variables {
-    pub n: HashMap<String, Variable>,
-    pub x: HashMap<String, Variable>,
-    pub i: HashMap<String, Variable>,
-    pub r: HashMap<String, Variable>,
+    pub n: HashMap<Key, Variable>,
+    pub x: HashMap<Key, Variable>,
+    pub i: HashMap<Key, Variable>,
+    pub r: HashMap<Key, Variable>,
     pub power_use: Variable,
     pub item_use: Variable,
     pub building_use: Variable,
@@ -76,10 +78,10 @@ pub struct Variables {
 pub struct Model {
     problem: ProblemVariables,
     constraints: Vec<Constraint>,
-    pub n: HashMap<String, Variable>,
-    pub x: HashMap<String, Variable>,
-    pub i: HashMap<String, Variable>,
-    pub r: HashMap<String, Variable>,
+    pub n: HashMap<Key, Variable>,
+    pub x: HashMap<Key, Variable>,
+    pub i: HashMap<Key, Variable>,
+    pub r: HashMap<Key, Variable>,
     pub power_use: Variable,
     pub item_use: Variable,
     pub building_use: Variable,
@@ -90,11 +92,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn define(
-        settings: &Settings,
-        all_items: &HashSet<String>,
-        recipes: &HashSet<String>,
-    ) -> Self {
+    pub fn define(settings: &Settings, all_items: &HashSet<Key>, recipes: &HashSet<Key>) -> Self {
         let mut problem = ProblemVariables::new();
 
         let n = problem.add_vector(variable().name("n").min(0.0), all_items.len());
@@ -141,7 +139,7 @@ impl Model {
         self.constraints.push(constraint);
     }
 
-    fn fix_input_amounts(&mut self, settings: &Settings, all_items: &HashSet<String>) {
+    fn fix_input_amounts(&mut self, settings: &Settings, all_items: &HashSet<Key>) {
         for item in all_items {
             let input = settings.inputs.get(item).copied().unwrap_or(0.0);
             self.constrain(constraint!(self.n[item] == input));
@@ -165,7 +163,7 @@ impl Model {
         }
     }
 
-    fn add_product_constraints(&mut self, products: &HashSet<String>, data: &Data) {
+    fn add_product_constraints(&mut self, products: &HashSet<Key>, data: &Data) {
         for item in products {
             let expr = self.n[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(rk, rv)| {
@@ -182,7 +180,7 @@ impl Model {
         }
     }
 
-    fn add_ingredient_constraints(&mut self, ingredients: &HashSet<String>, data: &Data) {
+    fn add_ingredient_constraints(&mut self, ingredients: &HashSet<Key>, data: &Data) {
         for item in ingredients {
             let expr = self.x[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(recipe_key, recipe_data)| {
@@ -210,7 +208,7 @@ impl Model {
         }
     }
 
-    fn calculate_power_use(&mut self, data: &Data, recipes: &HashSet<String>) {
+    fn calculate_power_use(&mut self, data: &Data, recipes: &HashSet<Key>) {
         let expr = Expression::sum(
             recipes
                 .iter()
@@ -224,24 +222,24 @@ impl Model {
         self.constrain(constraint!(expr == self.power_use));
     }
 
-    fn calculate_item_use(&mut self, items: &HashSet<String>) {
-        static EXCLUDED: &[&str] = &[
-            "Power_Produced",
-            "Power_Produced_Other",
-            "Power_Produced_Fuel",
-            "Power_Produced_Nuclear",
+    fn calculate_item_use(&mut self, items: &HashSet<Key>) {
+        let excluded = [
+            Key::new_static("Power_Produced"),
+            Key::new_static("Power_Produced_Other"),
+            Key::new_static("Power_Produced_Fuel"),
+            Key::new_static("Power_Produced_Nuclear"),
         ];
 
         let expr = Expression::sum(
             items
                 .iter()
-                .filter(|item| EXCLUDED.iter().all(|e| e != item))
+                .filter(|item| excluded.iter().all(|e| e != *item))
                 .map(|item| self.i[item]),
         );
         self.constrain(constraint!(expr == self.item_use));
     }
 
-    fn calculate_building_use(&mut self, recipes: &HashSet<String>) {
+    fn calculate_building_use(&mut self, recipes: &HashSet<Key>) {
         let expr = Expression::sum(recipes.iter().map(|r| self.r[r]));
         self.constrain(constraint!(expr == self.building_use));
     }
@@ -251,7 +249,7 @@ impl Model {
         self.constrain(constraint!(expr == self.resource_use));
     }
 
-    fn calculate_buildings_scaled(&mut self, data: &Data, recipes: &HashSet<String>) {
+    fn calculate_buildings_scaled(&mut self, data: &Data, recipes: &HashSet<Key>) {
         let expr = Expression::sum(recipes.iter().map(|rk| {
             ((data.recipes[rk].ingredients.len() + data.recipes[rk].products.len() - 1) as f64)
                 .powf(1.584963)
@@ -261,7 +259,7 @@ impl Model {
         self.constrain(constraint!(expr == self.buildings_scaled));
     }
 
-    fn calculate_resources_scaled(&mut self, resource_weights: HashMap<String, f64>) {
+    fn calculate_resources_scaled(&mut self, resource_weights: HashMap<Key, f64>) {
         let expr = Expression::sum(
             resource_weights
                 .iter()
@@ -270,7 +268,7 @@ impl Model {
         self.constrain(constraint!(expr == self.resources_scaled));
     }
 
-    fn calculate_sink_points(&mut self, data: &Data, items: &HashSet<String>) {
+    fn calculate_sink_points(&mut self, data: &Data, items: &HashSet<Key>) {
         let expr = Expression::sum(items.iter().filter_map(|ik| {
             data.items
                 .get(ik)
@@ -323,15 +321,16 @@ impl Model {
     }
 
     fn set_objective(mut self, settings: &Settings) -> PreparedModel {
-        let mut waste_penalty_expr = self.x["Desc_NuclearWaste_C"]
-            + self.x["Desc_NonFissibleUranium_C"]
-            + self.x["Desc_PlutoniumPellet_C"]
-            + self.x["Desc_PlutoniumCell_C"]
-            + self.x["Desc_PlutoniumWaste_C"]
-            + self.x["Desc_Ficsonium_C"];
+        let mut waste_penalty_expr = self.x[&"Desc_NuclearWaste_C".into()]
+            + self.x[&"Desc_NonFissibleUranium_C".into()]
+            + self.x[&"Desc_PlutoniumPellet_C".into()]
+            + self.x[&"Desc_PlutoniumCell_C".into()]
+            + self.x[&"Desc_PlutoniumWaste_C".into()]
+            + self.x[&"Desc_Ficsonium_C".into()];
 
         if settings.force_nuclear_waste {
-            waste_penalty_expr = waste_penalty_expr + (self.x["Desc_PlutoniumFuelRod_C"] / 10);
+            waste_penalty_expr =
+                waste_penalty_expr + (self.x[&"Desc_PlutoniumFuelRod_C".into()] / 10);
         }
 
         let problem = match &settings.max_item {
@@ -413,7 +412,7 @@ impl PreparedModel {
         let filtered_limits = settings
             .resource_limits
             .iter()
-            .filter(|(k, _)| *k != "Desc_Water_C")
+            .filter(|(k, _)| *k != &"Desc_Water_C".into())
             .map(|(k, v)| (k.clone(), *v))
             .collect::<HashMap<_, _>>();
         let avg_limit =
@@ -469,10 +468,10 @@ pub struct SolvedProblem {
 impl SolvedProblem {
     pub fn into_values(self, settings: &Settings, data: &Data) -> SolutionValues {
         const EPSILON: f64 = 0.001;
-        static POWER_SOURCES: &[&str] = &[
-            "Power_Produced_Other",
-            "Power_Produced_Fuel",
-            "Power_Produced_Nuclear",
+        let power_sources = [
+            Key::new_static("Power_Produced_Other"),
+            Key::new_static("Power_Produced_Fuel"),
+            Key::new_static("Power_Produced_Nuclear"),
         ];
 
         let resources_needed = data
@@ -492,6 +491,52 @@ impl SolvedProblem {
             .filter(|(k, _)| !settings.resource_limits.contains_key(*k))
             .map(|(k, v)| (data.items[k].name.clone(), v))
             .collect();
+
+        let mut graph = DiGraph::<(f64, String), f64>::new();
+        let output = graph.add_node((0.0, "output".to_string()));
+        let mut recipe_nodes = HashMap::new();
+
+        for (recipe_key, var) in &self.vars.r {
+            let recipe_val = self.solution.value(*var);
+            if recipe_val <= EPSILON {
+                continue;
+            }
+
+            let recipe = &data.recipes[recipe_key];
+            let node = graph.add_node((recipe_val, recipe.name.clone()));
+
+            // if let Some(item) = recipe.products.iter().find_map(|p| {
+            //     for o in settings.outputs.keys() {
+            //         if &p.item == o {
+            //             return Some(p);
+            //         }
+            //     }
+            //     None
+            // }) {
+            //     let amount = (60.0 / recipe.time) * item.amount * recipe_val;
+            //
+            //     graph.add_edge(node, output, (data.items[&item.item].name.clone(), amount));
+            // }
+
+            recipe_nodes.insert(recipe_key.clone(), (node, recipe.clone(), recipe_val));
+        }
+
+        let mut needs = BTreeMap::new();
+
+        for (k, v) in &settings.outputs {
+            needs.insert(k.clone(), (output, *v));
+        }
+
+        while let Some((needs_key, (needs_node, needs_amount))) = needs.pop_first() {
+            for (k, v) in &self.vars.r {
+                let recipe = &data.recipes[&k];
+                let Some(recipe_item) = recipe.products.iter().find(|r| r.item == needs_key) else {
+                    continue;
+                };
+            }
+        }
+
+        // println!("{:?}", Dot::new(&graph));
 
         let mut products_map = HashMap::new();
         for (item, var) in &self.vars.i {
@@ -585,7 +630,7 @@ impl SolvedProblem {
                 .vars
                 .x
                 .iter()
-                .filter(|(k, _)| POWER_SOURCES.contains(&k.as_str()))
+                .filter(|(k, _)| power_sources.contains(*k))
                 .map(|(k, v)| (k.clone(), self.solution.value(*v)))
                 .collect(),
             power_use: self.solution.value(self.vars.power_use),
@@ -608,7 +653,7 @@ pub struct SolutionValues {
     pub resources_needed: HashMap<String, f64>,
     pub items_needed: HashMap<String, f64>,
     pub recipes_used: HashMap<String, f64>,
-    pub power_produced: HashMap<String, f64>,
+    pub power_produced: HashMap<Key, f64>,
 
     pub power_use: f64,
     pub item_use: f64,
