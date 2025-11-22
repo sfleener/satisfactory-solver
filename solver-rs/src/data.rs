@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -9,7 +10,7 @@ pub struct Settings {
     pub recipes_off: HashSet<String>,
     pub inputs: HashMap<String, f64>,
     pub outputs: HashMap<String, f64>,
-    pub max_item: bool,
+    pub max_item: Option<serde_json::Value>,
     #[serde(rename = "checkbox_Nuclear Waste")]
     pub force_nuclear_waste: bool,
     pub integer_recipes: bool,
@@ -35,13 +36,11 @@ pub struct Weights {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct Data {
-    pub items: HashMap<String, Item>,
-    pub resources: HashMap<String, Resource>,
+pub struct RawData {
+    pub items: HashMap<String, Arc<Item>>,
+    pub resources: HashMap<String, Arc<Resource>>,
     pub recipes: HashMap<String, Recipe>,
-    pub machines: HashMap<String, Machine>,
-    pub generators: HashMap<(), ()>,
+    pub machines: HashMap<String, Arc<Machine>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -53,7 +52,7 @@ pub struct Item {
     pub points: f64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub enum Form {
     #[serde(rename = "RF_SOLID")]
