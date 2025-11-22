@@ -21,7 +21,7 @@ fn main() -> eyre::Result<()> {
     settings
         .outputs
         .insert("Desc_SpaceElevatorPart_3_C".to_string(), 2.5);
-    settings.phase = Some(3);
+    settings.phase = Some(2);
 
     settings.floor_resource_limits(1e-5);
 

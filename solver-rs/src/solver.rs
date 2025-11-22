@@ -155,7 +155,7 @@ impl Model {
 
         for (item, &amount) in &settings.outputs {
             if let Some(&x) = self.x.get(item) {
-                self.constrain(constraint!(x == amount));
+                self.constrain(constraint!(x >= amount));
             } else {
                 panic!(
                     "Output item '{item}' not found in model items: {:?}.",
@@ -193,7 +193,7 @@ impl Model {
                         .map(|p| p.amount * 60.0 / recipe_data.time * self.r[recipe_key])
                 }));
             if let Some(i) = self.i.get(item) {
-                self.constrain(constraint::eq(expr, i))
+                self.constrain(constraint!(expr == i))
             } else {
                 panic!("Item '{item}' not found in model intermediate items.")
             }
@@ -312,11 +312,12 @@ impl Model {
             disabled.insert("Build_AssemblerMk1_C");
         }
 
-        for (k, _) in data
+        for (k, r) in data
             .recipes
             .iter()
             .filter(|(_, r)| disabled.contains(r.machine.as_str()))
         {
+            // println!("Disabling {:?}", r.name);
             self.fix_zero(self.r[k]);
         }
     }
@@ -478,7 +479,6 @@ impl SolvedProblem {
             .resources
             .iter()
             .filter_map(|(k, _)| self.vars.i.get(k).map(|v| (k, self.solution.value(*v))))
-            .inspect(|v| println!("resource: {v:?}"))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| settings.resource_limits.contains_key(*k))
             .map(|(k, v)| (data.resources[k].name.clone(), v))
