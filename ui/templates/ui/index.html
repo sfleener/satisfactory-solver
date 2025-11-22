@@ -272,6 +272,7 @@
   // ----------------- STATE -----------------
   let activeTab = 'Resources';
 
+  let phase = 5;
   let resourceLimits = {};
   let defaultResourceLimits = {}; // <— model defaults for the ↺ buttons
 
@@ -627,6 +628,7 @@
     for (const [k,v] of Object.entries(outputs||{})){ if (!k.startsWith('__new_')) cleanOutputs[k]=v; }
     const recipes_off = Object.entries(recipeToggles||{}).filter(([_,on]) => !on).map(([id])=>id);
     return {
+      phase: phase,
       resource_limits: resourceLimits,
       weights,
       inputs: cleanInputs,
@@ -689,6 +691,7 @@
   }
 
   function applySettings(s){
+    phase = s.phase || {};
     resourceLimits = s.resource_limits || {};
     weights = s.weights || {};
     inputs = s.inputs || {};

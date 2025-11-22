@@ -41,6 +41,7 @@ def default_settings(request):
 
         # Create and save once so future calls use DB
         obj = DefaultSettings.objects.create(
+            phase=payload.get("phase", 5),
             resource_limits=payload.get("resource_limits", {}),
             weights=payload.get("weights", {}),
             recipes_off=payload.get("recipes_off", []),
@@ -52,6 +53,7 @@ def default_settings(request):
         )
 
     payload = {
+        "phase": obj.phase,
         "resource_limits": obj.resource_limits,
         "weights": obj.weights,
         "recipes_off": obj.recipes_off,
@@ -73,6 +75,7 @@ def optimize(request):
     except Exception as e:
         return HttpResponseBadRequest(f"Invalid JSON: {e}")
 
+    settings.setdefault("phase", None)
     settings.setdefault("resource_limits", {})
     settings.setdefault("weights", {})
     settings.setdefault("recipes_off", [])

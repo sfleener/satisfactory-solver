@@ -15,6 +15,7 @@ class Migration(migrations.Migration):
             name='DefaultSettings',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('phase', models.IntegerField(default=5)),
                 ('resource_limits', models.JSONField(default=dict)),
                 ('weights', models.JSONField(default=dict)),
                 ('recipes_off', models.JSONField(default=list)),

@@ -106,6 +106,33 @@ def calculate_sink_points(m, data, items):
     expr = sum(data['items'][item]['points'] * m.x[item] for item in items if item in data['items'] and data['items'][item]['points'] > 0 and data['items'][item]['form'] == 'RF_SOLID')
     m.c.add(expr == m.sink_points)
 
+def disabled_locked_recipes(m, settings, data):
+    phase = settings['phase']
+    if not phase:
+        return
+    disabled = set([])
+    if phase < 5:
+        disabled.add('Build_Converter_C')
+        disabled.add('Build_QuantumEncoder_C')
+    if phase < 4:
+        disabled.add('Build_GeneratorNuclear_C')
+        disabled.add('Build_HadronCollider_C')
+    if phase < 3:
+        disabled.add('Build_OilRefinery_C')
+        disabled.add('Build_Packager_C')
+        disabled.add('Build_GeneratorFuel_C')
+        disabled.add('Build_ManufacturerMk1_C')
+    if phase < 2:
+        disabled.add('Build_FoundryMk1_C')
+        disabled.add('Build_GeneratorCoal_C')
+    if phase < 1:
+        disabled.add('Build_AssemblerMk1_C')
+
+    for recipe_key, recipe_data in data['recipes']:
+        if recipe_data['machine'] not in disabled:
+            continue
+        m.r[recipe_key].fix(0)
+
 def set_objective(m, settings):
     waste_penalty_expr = m.x['Desc_NuclearWaste_C'] + \
                          m.x['Desc_NonFissibleUranium_C'] + \
@@ -188,6 +215,9 @@ def create_model(data, settings):
     calculate_buildings_scaled(m, data, recipes)
     calculate_resources_scaled(m, resource_weights)
     calculate_sink_points(m, data, products)
+
+    disabled_locked_recipes(m, settings, data)
+
     set_objective(m, settings)
 
     return m

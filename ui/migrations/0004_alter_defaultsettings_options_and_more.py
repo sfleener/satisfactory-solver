@@ -35,6 +35,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='defaultsettings',
+            name='phase',
+            field=models.IntegerField(blank=True, default=None, null=True),
+        ),
+        migrations.AlterField(
+            model_name='defaultsettings',
             name='resource_limits',
             field=models.JSONField(blank=True, default=None, null=True),
         ),

@@ -1,5 +1,5 @@
 {
-    "phase": null,
+    "phase": 5,
     "resource_limits": {
         "Desc_Water_C": 99999999,
         "Desc_OreGold_C": 15000,

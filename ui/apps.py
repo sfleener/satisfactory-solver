@@ -20,6 +20,7 @@ class UiConfig(AppConfig):
                 with open(default_path, 'r', encoding='utf-8') as f:
                     raw = json.load(f)
                 DefaultSettings.objects.create(
+                    phase=raw.get("phase", 5),
                     resource_limits=raw.get("resource_limits", {}),
                     weights=raw.get("weights", {}),
                     recipes_off=raw.get("recipes_off", []),

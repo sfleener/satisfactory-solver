@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class DefaultSettings(models.Model):
+    phase = models.IntegerField(blank=True, null=True, default=5)
     resource_limits = models.JSONField(blank=True, null=True, default=None)
     weights = models.JSONField(blank=True, null=True, default=None)
     recipes_off = models.JSONField(blank=True, null=True, default=None)
