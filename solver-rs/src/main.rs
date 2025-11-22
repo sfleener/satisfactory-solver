@@ -1,4 +1,4 @@
-use crate::data::{RawData, Settings};
+use crate::data::{Data, Settings};
 use good_lp::{Solution, SolverModel};
 use std::collections::HashMap;
 use std::fs::File;
@@ -21,11 +21,12 @@ fn main() -> eyre::Result<()> {
     settings
         .outputs
         .insert("Desc_SpaceElevatorPart_3_C".to_string(), 2.5);
-    
+    settings.phase = Some(3);
+
     settings.floor_resource_limits(1e-5);
 
     let data = BufReader::new(File::open("../ui/data/data.json")?);
-    let data: RawData = serde_json::from_reader(data)?;
+    let data: Data = serde_json::from_reader(data)?;
 
     let solved = PreparedModel::new(&data, &mut settings).solve()?;
     let values = solved.into_values(&settings, &data);

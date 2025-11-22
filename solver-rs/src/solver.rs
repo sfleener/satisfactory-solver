@@ -1,4 +1,4 @@
-use crate::data::{Form, Item, RawData, Recipe, Settings};
+use crate::data::{Data, Form, Item, Recipe, Settings};
 use eyre::bail;
 use good_lp::solvers::highs::{HighsProblem, HighsSolution};
 use good_lp::{
@@ -20,7 +20,7 @@ struct Keys {
     all_items: HashSet<String>,
 }
 
-fn extract_items(raw_data: &RawData) -> Keys {
+fn extract_items(raw_data: &Data) -> Keys {
     let resources = HashSet::from_iter(raw_data.resources.keys().cloned());
     let recipes = HashSet::from_iter(raw_data.recipes.keys().cloned());
     let mut products = HashSet::default();
@@ -165,7 +165,7 @@ impl Model {
         }
     }
 
-    fn add_product_constraints(&mut self, products: &HashSet<String>, data: &RawData) {
+    fn add_product_constraints(&mut self, products: &HashSet<String>, data: &Data) {
         for item in products {
             let expr = self.n[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(rk, rv)| {
@@ -182,7 +182,7 @@ impl Model {
         }
     }
 
-    fn add_ingredient_constraints(&mut self, ingredients: &HashSet<String>, data: &RawData) {
+    fn add_ingredient_constraints(&mut self, ingredients: &HashSet<String>, data: &Data) {
         for item in ingredients {
             let expr = self.x[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(recipe_key, recipe_data)| {
@@ -210,7 +210,7 @@ impl Model {
         }
     }
 
-    fn calculate_power_use(&mut self, data: &RawData, recipes: &HashSet<String>) {
+    fn calculate_power_use(&mut self, data: &Data, recipes: &HashSet<String>) {
         let expr = Expression::sum(
             recipes
                 .iter()
@@ -251,7 +251,7 @@ impl Model {
         self.constrain(constraint!(expr == self.resource_use));
     }
 
-    fn calculate_buildings_scaled(&mut self, data: &RawData, recipes: &HashSet<String>) {
+    fn calculate_buildings_scaled(&mut self, data: &Data, recipes: &HashSet<String>) {
         let expr = Expression::sum(recipes.iter().map(|rk| {
             ((data.recipes[rk].ingredients.len() + data.recipes[rk].products.len() - 1) as f64)
                 .powf(1.584963)
@@ -270,7 +270,7 @@ impl Model {
         self.constrain(constraint!(expr == self.resources_scaled));
     }
 
-    fn calculate_sink_points(&mut self, data: &RawData, items: &HashSet<String>) {
+    fn calculate_sink_points(&mut self, data: &Data, items: &HashSet<String>) {
         let expr = Expression::sum(items.iter().filter_map(|ik| {
             data.items
                 .get(ik)
@@ -284,6 +284,40 @@ impl Model {
     fn disable_off_recipes(&mut self, settings: &Settings) {
         for recipe in &settings.recipes_off {
             self.fix_zero(self.r[recipe]);
+        }
+    }
+
+    pub fn disable_locked_recipes(&mut self, settings: &Settings, data: &Data) {
+        let Some(phase) = settings.phase else { return };
+        let mut disabled = HashSet::new();
+        if phase < 5 {
+            disabled.insert("Build_Converter_C");
+            disabled.insert("Build_QuantumEncoder_C");
+        }
+        if phase < 4 {
+            disabled.insert("Build_GeneratorNuclear_C");
+            disabled.insert("Build_HadronCollider_C");
+        }
+        if phase < 3 {
+            disabled.insert("Build_OilRefinery_C");
+            disabled.insert("Build_Packager_C");
+            disabled.insert("Build_GeneratorFuel_C");
+            disabled.insert("Build_ManufacturerMk1_C");
+        }
+        if phase < 2 {
+            disabled.insert("Build_FoundryMk1_C");
+            disabled.insert("Build_GeneratorCoal_C");
+        }
+        if phase < 1 {
+            disabled.insert("Build_AssemblerMk1_C");
+        }
+
+        for (k, _) in data
+            .recipes
+            .iter()
+            .filter(|(_, r)| disabled.contains(r.machine.as_str()))
+        {
+            self.fix_zero(self.r[k]);
         }
     }
 
@@ -366,14 +400,14 @@ pub struct PreparedModel {
 }
 
 impl PreparedModel {
-    pub fn new(data: &RawData, settings: &Settings) -> Self {
+    pub fn new(data: &Data, settings: &Settings) -> Self {
         let keys = extract_items(data);
         let mut model = Model::define(settings, &keys.all_items, &keys.recipes);
         model.fix_input_amounts(settings, &keys.all_items);
         model.fix_output_amount(settings);
-        model.add_product_constraints(&keys.products, &data);
-        model.add_ingredient_constraints(&keys.all_items, &data);
-        model.add_resource_constraints(&settings);
+        model.add_product_constraints(&keys.products, data);
+        model.add_ingredient_constraints(&keys.all_items, data);
+        model.add_resource_constraints(settings);
 
         let filtered_limits = settings
             .resource_limits
@@ -394,15 +428,16 @@ impl PreparedModel {
             })
             .collect();
 
-        model.calculate_power_use(&data, &keys.recipes);
+        model.calculate_power_use(data, &keys.recipes);
         model.calculate_item_use(&keys.all_items);
         model.calculate_building_use(&keys.recipes);
-        model.calculate_resource_use(&settings);
-        model.calculate_buildings_scaled(&data, &keys.recipes);
+        model.calculate_resource_use(settings);
+        model.calculate_buildings_scaled(data, &keys.recipes);
         model.calculate_resources_scaled(resource_weights);
-        model.calculate_sink_points(&data, &keys.products);
+        model.calculate_sink_points(data, &keys.products);
 
         model.disable_off_recipes(&settings);
+        model.disable_locked_recipes(settings, data);
 
         model.set_objective(settings)
     }
@@ -431,7 +466,7 @@ pub struct SolvedProblem {
 }
 
 impl SolvedProblem {
-    pub fn into_values(self, settings: &Settings, data: &RawData) -> SolutionValues {
+    pub fn into_values(self, settings: &Settings, data: &Data) -> SolutionValues {
         const EPSILON: f64 = 0.001;
         static POWER_SOURCES: &[&str] = &[
             "Power_Produced_Other",

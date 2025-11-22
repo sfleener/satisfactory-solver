@@ -5,6 +5,7 @@ use std::sync::Arc;
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Settings {
+    pub phase: Option<u8>,
     pub resource_limits: HashMap<String, f64>,
     pub weights: Weights,
     pub recipes_off: HashSet<String>,
@@ -46,7 +47,7 @@ pub struct Weights {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RawData {
+pub struct Data {
     pub items: HashMap<String, Arc<Item>>,
     pub resources: HashMap<String, Arc<Resource>>,
     pub recipes: HashMap<String, Recipe>,
