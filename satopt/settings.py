@@ -57,10 +57,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "satopt.middleware.HttpsRedirectMiddleware",
-    "satopt.middleware.CanonicalDomainMiddleware",
-    "satopt.middleware.SecurityHeadersMiddleware",
+    # "django.middleware.security.SecurityMiddleware",
+    # "satopt.middleware.HttpsRedirectMiddleware",
+    # "satopt.middleware.CanonicalDomainMiddleware",
+    # "satopt.middleware.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

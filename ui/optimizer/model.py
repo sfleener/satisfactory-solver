@@ -17,7 +17,7 @@ def define_variables(m, all_items, recipes):
     m.n = Var(all_items, within=NonNegativeReals)  # Input Items
     m.x = Var(all_items, within=NonNegativeReals)  # Output Items
     m.i = Var(all_items, within=NonNegativeReals)  # Intermediate items
-    m.r = Var(recipes, within=NonNegativeReals)  # Amount of each recipe used
+    m.r = Var(recipes, within=NonNegativeIntegers)  # Amount of each recipe used
 
     # Variables for objective cost
     m.power_use = Var(within=NonNegativeReals)
