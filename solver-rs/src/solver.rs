@@ -6,11 +6,15 @@ use good_lp::{
     constraint, default_solver, variable,
 };
 use itertools::Itertools;
+use num::{Float, Integer, Signed};
 use petgraph::data::Build;
 use petgraph::dot::Dot;
 use petgraph::graph::DiGraph;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::fmt::{Debug, Display, Formatter};
 use std::iter::Sum;
+use std::num::NonZeroI64;
+use std::ops::{Add, Neg};
 
 type PreparedProblem = HighsProblem;
 
@@ -95,9 +99,9 @@ impl Model {
     pub fn define(settings: &Settings, all_items: &HashSet<Key>, recipes: &HashSet<Key>) -> Self {
         let mut problem = ProblemVariables::new();
 
-        let n = problem.add_vector(variable().name("n").min(0.0), all_items.len());
-        let x = problem.add_vector(variable().name("x").min(0.0), all_items.len());
-        let i = problem.add_vector(variable().name("i").min(0.0), all_items.len());
+        let n = problem.add_vector(variable().name("n").min(0), all_items.len());
+        let x = problem.add_vector(variable().name("x").min(0), all_items.len());
+        let i = problem.add_vector(variable().name("i").min(0), all_items.len());
         let r = problem.add_vector(
             if settings.integer_recipes {
                 variable().name("r").min(0).integer()
@@ -106,13 +110,13 @@ impl Model {
             },
             recipes.len(),
         );
-        let power_use = problem.add(variable().name("power_use").min(0.0));
-        let item_use = problem.add(variable().name("item_use").min(0.0));
-        let building_use = problem.add(variable().name("building_use").min(0.0));
-        let resource_use = problem.add(variable().name("resource_use").min(0.0));
-        let buildings_scaled = problem.add(variable().name("buildings_scaled").min(0.0));
-        let resources_scaled = problem.add(variable().name("resources_scaled").min(0.0));
-        let sink_points = problem.add(variable().name("sink_points").min(0.0));
+        let power_use = problem.add(variable().name("power_use").min(0));
+        let item_use = problem.add(variable().name("item_use").min(0));
+        let building_use = problem.add(variable().name("building_use").min(0));
+        let resource_use = problem.add(variable().name("resource_use").min(0));
+        let buildings_scaled = problem.add(variable().name("buildings_scaled").min(0));
+        let resources_scaled = problem.add(variable().name("resources_scaled").min(0));
+        let sink_points = problem.add(variable().name("sink_points").min(0));
 
         Model {
             problem,
@@ -480,7 +484,7 @@ impl SolvedProblem {
             .filter_map(|(k, _)| self.vars.i.get(k).map(|v| (k, self.solution.value(*v))))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| settings.resource_limits.contains_key(*k))
-            .map(|(k, v)| (data.resources[k].name.clone(), v))
+            .map(|(k, v)| (data.resources[k].name.clone(), v.into()))
             .collect();
 
         let items_needed = data
@@ -489,7 +493,7 @@ impl SolvedProblem {
             .filter_map(|(k, _)| self.vars.i.get(k).map(|v| (k, self.solution.value(*v))))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| !settings.resource_limits.contains_key(*k))
-            .map(|(k, v)| (data.items[k].name.clone(), v))
+            .map(|(k, v)| (data.items[k].name.clone(), v.into()))
             .collect();
 
         let mut graph = DiGraph::<(f64, String), f64>::new();
@@ -564,7 +568,7 @@ impl SolvedProblem {
                     let recipe_data = &data.recipes[recipe];
                     products.insert(
                         recipe_data.name.clone(),
-                        (60.0 / recipe_data.time) * ingredient.amount * recipe_val,
+                        ((60.0 / recipe_data.time) * ingredient.amount * recipe_val).into(),
                     );
                 }
             }
@@ -593,20 +597,20 @@ impl SolvedProblem {
                     });
                 ingredients.insert(
                     name,
-                    (60.0 / data.recipes[recipe].time) * ingredient.amount * recipe_val,
+                    ((60.0 / data.recipes[recipe].time) * ingredient.amount * recipe_val).into(),
                 );
             }
         }
 
         SolutionValues {
-            sink_points: self.solution.value(self.vars.sink_points),
+            sink_points: self.solution.value(self.vars.sink_points).into(),
             items_input: self
                 .vars
                 .n
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (data.items[k].name.clone(), v))
+                .map(|(k, v)| (data.items[k].name.clone(), v.into()))
                 .collect(),
             items_output: self
                 .vars
@@ -614,7 +618,7 @@ impl SolvedProblem {
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (data.items[k].name.clone(), v))
+                .map(|(k, v)| (data.items[k].name.clone(), v.into()))
                 .collect(),
             resources_needed,
             items_needed,
@@ -624,21 +628,21 @@ impl SolvedProblem {
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (data.recipes[k].name.clone(), v))
+                .map(|(k, v)| (data.recipes[k].name.clone(), v.into()))
                 .collect(),
             power_produced: self
                 .vars
                 .x
                 .iter()
                 .filter(|(k, _)| power_sources.contains(*k))
-                .map(|(k, v)| (k.clone(), self.solution.value(*v)))
+                .map(|(k, v)| (k.clone(), self.solution.value(*v).into()))
                 .collect(),
-            power_use: self.solution.value(self.vars.power_use),
-            item_use: self.solution.value(self.vars.item_use),
-            buildings: self.solution.value(self.vars.building_use),
-            resources: self.solution.value(self.vars.resource_use),
-            buildings_scaled: self.solution.value(self.vars.buildings_scaled),
-            resources_scaled: self.solution.value(self.vars.resources_scaled),
+            power_use: self.solution.value(self.vars.power_use).into(),
+            item_use: self.solution.value(self.vars.item_use).into(),
+            buildings: self.solution.value(self.vars.building_use).into(),
+            resources: self.solution.value(self.vars.resource_use).into(),
+            buildings_scaled: self.solution.value(self.vars.buildings_scaled).into(),
+            resources_scaled: self.solution.value(self.vars.resources_scaled).into(),
             products_map,
             ingredients_map,
         }
@@ -647,21 +651,194 @@ impl SolvedProblem {
 
 #[derive(Debug)]
 pub struct SolutionValues {
-    pub sink_points: f64,
-    pub items_input: HashMap<String, f64>,
-    pub items_output: HashMap<String, f64>,
-    pub resources_needed: HashMap<String, f64>,
-    pub items_needed: HashMap<String, f64>,
-    pub recipes_used: HashMap<String, f64>,
-    pub power_produced: HashMap<Key, f64>,
+    pub sink_points: Rational,
+    pub items_input: HashMap<String, Rational>,
+    pub items_output: HashMap<String, Rational>,
+    pub resources_needed: HashMap<String, Rational>,
+    pub items_needed: HashMap<String, Rational>,
+    pub recipes_used: HashMap<String, Rational>,
+    pub power_produced: HashMap<Key, Rational>,
 
-    pub power_use: f64,
-    pub item_use: f64,
-    pub buildings: f64,
-    pub resources: f64,
-    pub buildings_scaled: f64,
-    pub resources_scaled: f64,
+    pub power_use: Rational,
+    pub item_use: Rational,
+    pub buildings: Rational,
+    pub resources: Rational,
+    pub buildings_scaled: Rational,
+    pub resources_scaled: Rational,
 
-    pub products_map: HashMap<String, HashMap<String, f64>>,
-    pub ingredients_map: HashMap<String, HashMap<String, f64>>,
+    pub products_map: HashMap<String, HashMap<String, Rational>>,
+    pub ingredients_map: HashMap<String, HashMap<String, Rational>>,
+}
+
+#[derive(Copy, Clone)]
+struct Rational {
+    numerator: i64,
+    denominator: NonZeroI64,
+}
+
+impl Rational {
+    const ZERO: Rational = Rational {
+        numerator: 0,
+        denominator: NonZeroI64::new(1).unwrap(),
+    };
+    const ONE: Rational = Rational {
+        numerator: 1,
+        denominator: NonZeroI64::new(1).unwrap(),
+    };
+
+    fn new(numerator: i64, denominator: NonZeroI64) -> Self {
+        Rational {
+            numerator,
+            denominator,
+        }
+        .reduce()
+    }
+
+    fn reduce(self) -> Self {
+        if self.numerator == 0 {
+            return Self::ZERO;
+        }
+        if self.numerator == self.denominator.get() {
+            return Self::ONE;
+        }
+
+        let gcd = self.numerator.gcd(&self.denominator.get());
+        if gcd == 1 {
+            self
+        } else {
+            Rational {
+                numerator: self.numerator / gcd,
+                denominator: NonZeroI64::new(self.denominator.get() / gcd).unwrap(),
+            }
+        }
+    }
+
+    fn recip(self) -> Self {
+        Rational {
+            numerator: self.denominator.get(),
+            denominator: NonZeroI64::new(self.numerator).unwrap(),
+        }
+    }
+
+    fn from_f64(mut v: f64) -> Self {
+        let neg = v.is_sign_negative();
+        if neg {
+            v = -v;
+        }
+
+        let v =
+            Self::from_f64_rec(v, 0).unwrap_or_else(|e| panic!("Cannot reduce value {v}: {e:?}"));
+
+        if neg { -v } else { v }
+    }
+
+    fn from_f64_rec(v: f64, depth: u16) -> eyre::Result<Self> {
+        const EPSILON: f64 = 1e-5;
+
+        if depth >= 1024 {
+            bail!("Reached depth {depth}, bailing on reduction of {v}")
+        }
+
+        if v < EPSILON {
+            return Ok(Rational::ZERO);
+        }
+
+        if v < 1.0 + EPSILON && v > 1.0 - EPSILON {
+            return Ok(Rational::ONE);
+        }
+
+        let whole_part = v.floor();
+        let iwhole_part = whole_part as i64;
+        if iwhole_part > 0 {
+            let iwhole_part = Rational {
+                numerator: iwhole_part,
+                denominator: NonZeroI64::new(1).unwrap(),
+            };
+            let fractional_part = v - whole_part;
+            Ok((Self::from_f64_rec(fractional_part, depth + 1)? + iwhole_part).reduce())
+        } else {
+            Ok(Self::from_f64_rec(v.recip(), depth + 1)?.recip().reduce())
+        }
+    }
+}
+
+impl From<f64> for Rational {
+    fn from(value: f64) -> Self {
+        Self::from_f64(value)
+    }
+}
+
+impl Add<Rational> for Rational {
+    type Output = Rational;
+
+    fn add(self, rhs: Rational) -> Self::Output {
+        if self.denominator == rhs.denominator {
+            return Rational {
+                numerator: self.numerator + rhs.numerator,
+                denominator: self.denominator,
+            };
+        }
+
+        let lcm = self.denominator.get().lcm(&rhs.denominator.get());
+
+        Rational {
+            numerator: (self.numerator * (lcm / self.denominator.get()))
+                + (rhs.numerator * (lcm / rhs.denominator.get())),
+            denominator: NonZeroI64::new(lcm).unwrap(),
+        }
+    }
+}
+
+impl Neg for Rational {
+    type Output = Rational;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            numerator: -self.numerator,
+            denominator: self.denominator,
+        }
+    }
+}
+
+impl PartialEq for Rational {
+    fn eq(&self, other: &Self) -> bool {
+        let this = self.reduce();
+        let other = other.reduce();
+        this.numerator == other.numerator && this.denominator == other.denominator
+    }
+}
+
+impl Eq for Rational {}
+
+impl Debug for Rational {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let this = self.reduce();
+        write!(f, "{}/{}", this.numerator, this.denominator)
+    }
+}
+
+impl Display for Rational {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rational_from_float() {
+        assert_eq!(Rational::from_f64(0.0), Rational::ZERO);
+        assert_eq!(Rational::from_f64(1.0), Rational::ONE);
+
+        assert_eq!(
+            Rational::from_f64(3.0 / 8.0),
+            Rational::new(3, NonZeroI64::new(8).unwrap())
+        );
+        assert_eq!(
+            Rational::from_f64(8.0 / 3.0),
+            Rational::new(8, NonZeroI64::new(3).unwrap())
+        );
+    }
 }

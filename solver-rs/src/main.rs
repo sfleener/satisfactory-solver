@@ -1,7 +1,5 @@
 use crate::data::{Data, Settings};
 use crate::solver::PreparedModel;
-use good_lp::{Solution, SolverModel};
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 
