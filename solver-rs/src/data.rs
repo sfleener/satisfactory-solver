@@ -10,8 +10,36 @@ thread_local! {
     static INTERNER: RefCell<lasso::Rodeo> = RefCell::new(lasso::Rodeo::new());
 }
 
+#[derive(
+    Deserialize,
+    derive_more::Debug,
+    derive_more::Display,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+)]
+pub struct RecipeKey(Key);
+
+#[derive(
+    Deserialize,
+    derive_more::Debug,
+    derive_more::Display,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+)]
+pub struct ItemKey(Key);
+
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct Key(Spur);
+pub struct Key(Spur);
 
 impl<'de> Deserialize<'de> for Key {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -46,6 +74,12 @@ impl<'de> Deserialize<'de> for Key {
     }
 }
 
+impl ItemKey {
+    pub fn new_static(s: &'static str) -> Self {
+        Self(Key::new_static(s))
+    }
+}
+
 impl Key {
     pub fn new_static(s: &'static str) -> Self {
         Self(INTERNER.with(|l| l.borrow_mut().get_or_intern_static(s)))
@@ -61,6 +95,15 @@ impl Debug for Key {
 impl Display for Key {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         INTERNER.with(|l| f.write_str(l.borrow().resolve(&self.0)))
+    }
+}
+
+impl<T> From<T> for ItemKey
+where
+    T: Into<Key>,
+{
+    fn from(value: T) -> Self {
+        ItemKey(value.into())
     }
 }
 
@@ -80,11 +123,11 @@ impl From<&str> for Key {
 #[serde(deny_unknown_fields)]
 pub struct Settings {
     pub phase: Option<u8>,
-    pub resource_limits: HashMap<Key, f64>,
+    pub resource_limits: HashMap<ItemKey, f64>,
     pub weights: Weights,
-    pub recipes_off: HashSet<Key>,
-    pub inputs: HashMap<Key, f64>,
-    pub outputs: HashMap<Key, f64>,
+    pub recipes_off: HashSet<RecipeKey>,
+    pub inputs: HashMap<ItemKey, f64>,
+    pub outputs: HashMap<ItemKey, f64>,
     pub max_item: Option<serde_json::Value>,
     #[serde(rename = "checkbox_Nuclear Waste")]
     pub force_nuclear_waste: bool,
@@ -122,9 +165,9 @@ pub struct Weights {
 
 #[derive(Deserialize, Debug)]
 pub struct Data {
-    pub items: HashMap<Key, Arc<Item>>,
-    pub resources: HashMap<Key, Arc<Resource>>,
-    pub recipes: HashMap<Key, Arc<Recipe>>,
+    pub items: HashMap<ItemKey, Arc<Item>>,
+    pub resources: HashMap<ItemKey, Arc<Resource>>,
+    pub recipes: HashMap<RecipeKey, Arc<Recipe>>,
     pub machines: HashMap<Key, Arc<Machine>>,
 }
 
@@ -171,7 +214,7 @@ pub struct Recipe {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct RecipeItem {
-    pub item: Key,
+    pub item: ItemKey,
     pub amount: f64,
 }
 

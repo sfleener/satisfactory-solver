@@ -1,4 +1,5 @@
-use crate::data::{Data, Form, Key, Settings};
+use crate::data::{Data, Form, ItemKey, RecipeKey, Settings};
+use crate::rational::Rational;
 use eyre::bail;
 use good_lp::solvers::highs::HighsProblem;
 use good_lp::{
@@ -6,24 +7,20 @@ use good_lp::{
     constraint, default_solver, variable,
 };
 use itertools::Itertools;
-use num::{Float, FromPrimitive, Integer, Signed};
-use petgraph::data::Build;
-use petgraph::dot::Dot;
-use petgraph::graph::DiGraph;
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fmt::{Debug, Display, Formatter};
+use num::Float;
+use std::collections::{HashMap, HashSet};
+use std::fmt::{Debug, Display};
 use std::iter::Sum;
-use std::num::NonZeroI64;
-use std::ops::{Add, Neg};
+use std::ops::Add;
 
 type PreparedProblem = HighsProblem;
 
 struct Keys {
-    resources: HashSet<Key>,
-    recipes: HashSet<Key>,
-    products: HashSet<Key>,
-    ingredients: HashSet<Key>,
-    all_items: HashSet<Key>,
+    resources: HashSet<ItemKey>,
+    recipes: HashSet<RecipeKey>,
+    products: HashSet<ItemKey>,
+    ingredients: HashSet<ItemKey>,
+    all_items: HashSet<ItemKey>,
 }
 
 fn extract_items(raw_data: &Data) -> Keys {
@@ -66,10 +63,10 @@ fn extract_items(raw_data: &Data) -> Keys {
 }
 
 pub struct Variables {
-    pub n: HashMap<Key, Variable>,
-    pub x: HashMap<Key, Variable>,
-    pub i: HashMap<Key, Variable>,
-    pub r: HashMap<Key, Variable>,
+    pub n: HashMap<ItemKey, Variable>,
+    pub x: HashMap<ItemKey, Variable>,
+    pub i: HashMap<ItemKey, Variable>,
+    pub r: HashMap<RecipeKey, Variable>,
     pub power_use: Variable,
     pub item_use: Variable,
     pub building_use: Variable,
@@ -82,10 +79,10 @@ pub struct Variables {
 pub struct Model {
     problem: ProblemVariables,
     constraints: Vec<Constraint>,
-    pub n: HashMap<Key, Variable>,
-    pub x: HashMap<Key, Variable>,
-    pub i: HashMap<Key, Variable>,
-    pub r: HashMap<Key, Variable>,
+    pub n: HashMap<ItemKey, Variable>,
+    pub x: HashMap<ItemKey, Variable>,
+    pub i: HashMap<ItemKey, Variable>,
+    pub r: HashMap<RecipeKey, Variable>,
     pub power_use: Variable,
     pub item_use: Variable,
     pub building_use: Variable,
@@ -96,7 +93,11 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn define(settings: &Settings, all_items: &HashSet<Key>, recipes: &HashSet<Key>) -> Self {
+    pub fn define(
+        settings: &Settings,
+        all_items: &HashSet<ItemKey>,
+        recipes: &HashSet<RecipeKey>,
+    ) -> Self {
         let mut problem = ProblemVariables::new();
 
         let n = problem.add_vector(variable().name("n").min(0), all_items.len());
@@ -143,7 +144,7 @@ impl Model {
         self.constraints.push(constraint);
     }
 
-    fn fix_input_amounts(&mut self, settings: &Settings, all_items: &HashSet<Key>) {
+    fn fix_input_amounts(&mut self, settings: &Settings, all_items: &HashSet<ItemKey>) {
         for item in all_items {
             let input = settings.inputs.get(item).copied().unwrap_or(0.0);
             self.constrain(constraint!(self.n[item] == input));
@@ -167,7 +168,7 @@ impl Model {
         }
     }
 
-    fn add_product_constraints(&mut self, products: &HashSet<Key>, data: &Data) {
+    fn add_product_constraints(&mut self, products: &HashSet<ItemKey>, data: &Data) {
         for item in products {
             let expr = self.n[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(rk, rv)| {
@@ -184,7 +185,7 @@ impl Model {
         }
     }
 
-    fn add_ingredient_constraints(&mut self, ingredients: &HashSet<Key>, data: &Data) {
+    fn add_ingredient_constraints(&mut self, ingredients: &HashSet<ItemKey>, data: &Data) {
         for item in ingredients {
             let expr = self.x[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(recipe_key, recipe_data)| {
@@ -212,7 +213,7 @@ impl Model {
         }
     }
 
-    fn calculate_power_use(&mut self, data: &Data, recipes: &HashSet<Key>) {
+    fn calculate_power_use(&mut self, data: &Data, recipes: &HashSet<RecipeKey>) {
         let expr = Expression::sum(
             recipes
                 .iter()
@@ -226,12 +227,12 @@ impl Model {
         self.constrain(constraint!(expr == self.power_use));
     }
 
-    fn calculate_item_use(&mut self, items: &HashSet<Key>) {
+    fn calculate_item_use(&mut self, items: &HashSet<ItemKey>) {
         let excluded = [
-            Key::new_static("Power_Produced"),
-            Key::new_static("Power_Produced_Other"),
-            Key::new_static("Power_Produced_Fuel"),
-            Key::new_static("Power_Produced_Nuclear"),
+            ItemKey::new_static("Power_Produced"),
+            ItemKey::new_static("Power_Produced_Other"),
+            ItemKey::new_static("Power_Produced_Fuel"),
+            ItemKey::new_static("Power_Produced_Nuclear"),
         ];
 
         let expr = Expression::sum(
@@ -243,7 +244,7 @@ impl Model {
         self.constrain(constraint!(expr == self.item_use));
     }
 
-    fn calculate_building_use(&mut self, recipes: &HashSet<Key>) {
+    fn calculate_building_use(&mut self, recipes: &HashSet<RecipeKey>) {
         let expr = Expression::sum(recipes.iter().map(|r| self.r[r]));
         self.constrain(constraint!(expr == self.building_use));
     }
@@ -253,7 +254,7 @@ impl Model {
         self.constrain(constraint!(expr == self.resource_use));
     }
 
-    fn calculate_buildings_scaled(&mut self, data: &Data, recipes: &HashSet<Key>) {
+    fn calculate_buildings_scaled(&mut self, data: &Data, recipes: &HashSet<RecipeKey>) {
         let expr = Expression::sum(recipes.iter().map(|rk| {
             ((data.recipes[rk].ingredients.len() + data.recipes[rk].products.len() - 1) as f64)
                 .powf(1.584963)
@@ -263,7 +264,7 @@ impl Model {
         self.constrain(constraint!(expr == self.buildings_scaled));
     }
 
-    fn calculate_resources_scaled(&mut self, resource_weights: HashMap<Key, f64>) {
+    fn calculate_resources_scaled(&mut self, resource_weights: HashMap<ItemKey, f64>) {
         let expr = Expression::sum(
             resource_weights
                 .iter()
@@ -272,7 +273,7 @@ impl Model {
         self.constrain(constraint!(expr == self.resources_scaled));
     }
 
-    fn calculate_sink_points(&mut self, data: &Data, items: &HashSet<Key>) {
+    fn calculate_sink_points(&mut self, data: &Data, items: &HashSet<ItemKey>) {
         let expr = Expression::sum(items.iter().filter_map(|ik| {
             data.items
                 .get(ik)
@@ -473,9 +474,9 @@ impl SolvedProblem {
     pub fn into_values(self, settings: &Settings, data: &Data) -> SolutionValues {
         const EPSILON: f64 = 0.001;
         let power_sources = [
-            Key::new_static("Power_Produced_Other"),
-            Key::new_static("Power_Produced_Fuel"),
-            Key::new_static("Power_Produced_Nuclear"),
+            ItemKey::new_static("Power_Produced_Other"),
+            ItemKey::new_static("Power_Produced_Fuel"),
+            ItemKey::new_static("Power_Produced_Nuclear"),
         ];
 
         let resources_needed = data
@@ -484,7 +485,7 @@ impl SolvedProblem {
             .filter_map(|(k, _)| self.vars.i.get(k).map(|v| (k, self.solution.value(*v))))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| settings.resource_limits.contains_key(*k))
-            .map(|(k, v)| (data.resources[k].name.clone(), v.into()))
+            .map(|(k, v)| (*k, (data.resources[k].name.clone(), v.into())))
             .collect();
 
         let items_needed = data
@@ -493,54 +494,8 @@ impl SolvedProblem {
             .filter_map(|(k, _)| self.vars.i.get(k).map(|v| (k, self.solution.value(*v))))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| !settings.resource_limits.contains_key(*k))
-            .map(|(k, v)| (data.items[k].name.clone(), v.into()))
+            .map(|(k, v)| (*k, (data.items[k].name.clone(), v.into())))
             .collect();
-
-        let mut graph = DiGraph::<(f64, String), f64>::new();
-        let output = graph.add_node((0.0, "output".to_string()));
-        let mut recipe_nodes = HashMap::new();
-
-        for (recipe_key, var) in &self.vars.r {
-            let recipe_val = self.solution.value(*var);
-            if recipe_val <= EPSILON {
-                continue;
-            }
-
-            let recipe = &data.recipes[recipe_key];
-            let node = graph.add_node((recipe_val, recipe.name.clone()));
-
-            // if let Some(item) = recipe.products.iter().find_map(|p| {
-            //     for o in settings.outputs.keys() {
-            //         if &p.item == o {
-            //             return Some(p);
-            //         }
-            //     }
-            //     None
-            // }) {
-            //     let amount = (60.0 / recipe.time) * item.amount * recipe_val;
-            //
-            //     graph.add_edge(node, output, (data.items[&item.item].name.clone(), amount));
-            // }
-
-            recipe_nodes.insert(recipe_key.clone(), (node, recipe.clone(), recipe_val));
-        }
-
-        let mut needs = BTreeMap::new();
-
-        for (k, v) in &settings.outputs {
-            needs.insert(k.clone(), (output, *v));
-        }
-
-        while let Some((needs_key, (needs_node, needs_amount))) = needs.pop_first() {
-            for (k, v) in &self.vars.r {
-                let recipe = &data.recipes[&k];
-                let Some(recipe_item) = recipe.products.iter().find(|r| r.item == needs_key) else {
-                    continue;
-                };
-            }
-        }
-
-        // println!("{:?}", Dot::new(&graph));
 
         let mut products_map = HashMap::new();
         for (item, var) in &self.vars.i {
@@ -610,7 +565,7 @@ impl SolvedProblem {
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (data.items[k].name.clone(), v.into()))
+                .map(|(k, v)| (*k, (data.items[k].name.clone(), v.into())))
                 .collect(),
             items_output: self
                 .vars
@@ -618,7 +573,7 @@ impl SolvedProblem {
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (data.items[k].name.clone(), v.into()))
+                .map(|(k, v)| (*k, (data.items[k].name.clone(), v.into())))
                 .collect(),
             resources_needed,
             items_needed,
@@ -628,7 +583,7 @@ impl SolvedProblem {
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (data.recipes[k].name.clone(), v.into()))
+                .map(|(k, v)| (*k, (data.recipes[k].name.clone(), v.into())))
                 .collect(),
             power_produced: self
                 .vars
@@ -652,12 +607,12 @@ impl SolvedProblem {
 #[derive(Debug)]
 pub struct SolutionValues {
     pub sink_points: Rational,
-    pub items_input: HashMap<String, Rational>,
-    pub items_output: HashMap<String, Rational>,
-    pub resources_needed: HashMap<String, Rational>,
-    pub items_needed: HashMap<String, Rational>,
-    pub recipes_used: HashMap<String, Rational>,
-    pub power_produced: HashMap<Key, Rational>,
+    pub items_input: HashMap<ItemKey, (String, Rational)>,
+    pub items_output: HashMap<ItemKey, (String, Rational)>,
+    pub resources_needed: HashMap<ItemKey, (String, Rational)>,
+    pub items_needed: HashMap<ItemKey, (String, Rational)>,
+    pub recipes_used: HashMap<RecipeKey, (String, Rational)>,
+    pub power_produced: HashMap<ItemKey, Rational>,
 
     pub power_use: f64,
     pub item_use: f64,
@@ -668,68 +623,4 @@ pub struct SolutionValues {
 
     pub products_map: HashMap<String, HashMap<String, Rational>>,
     pub ingredients_map: HashMap<String, HashMap<String, Rational>>,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-struct Rational(num::rational::Rational64);
-
-impl Rational {}
-
-impl From<f64> for Rational {
-    fn from(value: f64) -> Self {
-        fn is_near(v: f64, expected: f64) -> bool {
-            const EPSILON: f64 = 1e-5;
-            v <= expected + EPSILON && v >= expected - EPSILON
-        }
-
-        fn is_zero(v: f64) -> bool {
-            is_near(v, 0.0)
-        }
-
-        if is_zero(value) {
-            return Self(num::rational::Rational64::ZERO);
-        }
-
-        let raw = num::rational::Rational64::from_f64(value)
-            .unwrap()
-            .reduced();
-        let numer = *raw.numer();
-        let denom = *raw.denom();
-        let whole = numer / denom;
-        let fractional = numer % denom;
-        let fractional = fractional as f64 / denom as f64;
-
-        if is_zero(fractional) {
-            return Self(num::rational::Rational64::new(whole, 1));
-        }
-
-        for i in 1i64..=20 {
-            for j in 1..=i {
-                if is_near(fractional, j as f64 / i as f64) {
-                    return Self(num::rational::Rational64::new((whole * i) + j, i));
-                }
-            }
-        }
-
-        panic!("Irreducable float: {value}");
-    }
-}
-
-impl Debug for Rational {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let this = self.0.reduced();
-        if *this.denom() == 1 {
-            Debug::fmt(this.numer(), f)
-        } else {
-            let num = *this.numer();
-            let den = *this.denom();
-
-            let whole = num / den;
-            if whole != 0 {
-                write!(f, "{} {}/{}", whole, num % den, den)
-            } else {
-                write!(f, "{}/{}", num, den)
-            }
-        }
-    }
 }

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+derive_more = { version = "2", features = ["debug", "display"] }
 eyre = "0.6"
 good_lp = { version = "1", default-features = false, features = ["highs"] }
 num = "0.4"

@@ -1,9 +1,12 @@
 use crate::data::{Data, Settings};
+use crate::outputs::output_graph;
 use crate::solver::PreparedModel;
 use std::fs::File;
 use std::io::BufReader;
 
 mod data;
+mod outputs;
+mod rational;
 mod solver;
 
 fn main() -> eyre::Result<()> {
@@ -29,7 +32,9 @@ fn main() -> eyre::Result<()> {
     let solved = PreparedModel::new(&data, &mut settings).solve()?;
     let values = solved.into_values(&settings, &data);
 
-    println!("{values:#?}");
+    // println!("{values:#?}");
+
+    output_graph(&settings, &data, &values);
 
     Ok(())
 }
