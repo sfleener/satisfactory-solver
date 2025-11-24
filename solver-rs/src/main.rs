@@ -13,16 +13,27 @@ fn main() -> eyre::Result<()> {
     let settings = BufReader::new(File::open("../ui/data/default.json")?);
     let mut settings: Settings = serde_json::from_reader(settings)?;
 
-    settings
-        .outputs
-        .insert("Desc_SpaceElevatorPart_1_C".into(), 6.into());
+    // settings
+    //     .outputs
+    //     .insert("Desc_SpaceElevatorPart_1_C".into(), 6.into());
+    // settings
+    //     .outputs
+    //     .insert("Desc_SpaceElevatorPart_2_C".into(), 5.into());
+    // settings
+    //     .outputs
+    //     .insert("Desc_SpaceElevatorPart_3_C".into(), 2.5.into());
+    // settings.phase = Some(2);
+
     settings
         .outputs
         .insert("Desc_SpaceElevatorPart_2_C".into(), 5.into());
     settings
         .outputs
-        .insert("Desc_SpaceElevatorPart_3_C".into(), 2.5.into());
-    settings.phase = Some(2);
+        .insert("Desc_SpaceElevatorPart_4_C".into(), 1.into());
+    settings
+        .outputs
+        .insert("Desc_SpaceElevatorPart_5_C".into(), 1.into());
+    settings.phase = Some(3);
 
     settings.floor_resource_limits(1e-5.into());
 

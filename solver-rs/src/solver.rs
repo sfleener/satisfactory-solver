@@ -296,6 +296,7 @@ impl Model {
     pub fn disable_locked_recipes(&mut self, settings: &Settings, data: &Data) {
         let Some(phase) = settings.phase else { return };
         let mut disabled: HashSet<MachineKey> = HashSet::new();
+        disabled.insert("Build_Packager_C".into());
         if phase < 5 {
             disabled.insert("Build_Converter_C".into());
             disabled.insert("Build_QuantumEncoder_C".into());

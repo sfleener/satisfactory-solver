@@ -1,4 +1,4 @@
-use crate::data::{Data, ItemKey, Settings};
+use crate::data::{Data, ItemKey, RecipeKey, Settings};
 use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use crate::solver::SolutionValues;
@@ -37,7 +37,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             provides_recipes
                 .entry(product.item)
                 .or_default()
-                .insert(*k, (amount_per_recipe, amount));
+                .insert(**k, (amount_per_recipe, amount));
         }
 
         for ingredient in &recipe.ingredients {
@@ -124,7 +124,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     }
 
     if !provides_recipes.is_empty() {
-        for (k, v) in provides_recipes {
+        for (k, v) in &provides_recipes {
             let extra: ItemsPerMinute = v.values().map(|(_, a)| *a).sum();
             let name = &data.items[&k].name;
             println!("Extra {name}: {extra:?}");
@@ -136,7 +136,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     for node in components.into_iter().rev().flatten() {
         let Some(max) = graph
             .edges_directed(node, Direction::Incoming)
-            .map(|edge| ranks.get(&edge.source()).copied().unwrap())
+            .filter_map(|edge| ranks.get(&edge.source()).copied())
             .max()
         else {
             ranks.insert(node, 0);
@@ -152,6 +152,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             graph: &graph,
             ranks: &ranks,
             data,
+            extras: &provides_recipes,
         }
     );
 }
@@ -160,6 +161,7 @@ struct DotGraphFmt<'a> {
     graph: &'a DiGraph<(Rat<Recipes>, String), (ItemKey, ItemsPerMinute)>,
     ranks: &'a HashMap<NodeIndex, u16>,
     data: &'a Data,
+    extras: &'a BTreeMap<ItemKey, BTreeMap<RecipeKey, (ItemsPerMinutePerRecipe, ItemsPerMinute)>>,
 }
 
 impl Debug for DotGraphFmt<'_> {
@@ -185,6 +187,14 @@ impl Debug for DotGraphFmt<'_> {
 
             writeln!(f, "  end")?;
         }
+
+        writeln!(f, "  subgraph Extras")?;
+        for (k, v) in self.extras {
+            let extra: ItemsPerMinute = v.values().map(|(_, a)| *a).sum();
+            let name = &self.data.items[&k].name;
+            writeln!(f, "    {k}[{extra:?} {name}]",)?;
+        }
+        writeln!(f, "  end")?;
 
         for edge in self.graph.edge_references() {
             let (item, amount) = edge.weight();
