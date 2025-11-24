@@ -1,13 +1,14 @@
 use crate::data::{Data, Settings};
-use crate::rational::Rational;
+use crate::rational::units::Recipes;
+use crate::rational::{ItemsPerMinute, Rat};
 use crate::solver::SolutionValues;
 use petgraph::dot::Dot;
 use petgraph::graph::DiGraph;
 use std::collections::{BTreeMap, HashMap};
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
-    let mut graph = DiGraph::<(Rational, String), Rational>::new();
-    let output = graph.add_node((Rational::ZERO, "output".to_string()));
+    let mut graph = DiGraph::<(Rat<Recipes>, String), ItemsPerMinute>::new();
+    let output = graph.add_node((Rat::ZERO, "output".to_string()));
     let mut recipe_nodes = HashMap::new();
     let mut resource_nodes = HashMap::new();
 
@@ -22,8 +23,8 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     for (k, (_, _, v)) in &recipe_nodes {
         let recipe = &data.recipes[k];
         for product in &recipe.products {
-            let amount_per_recipe = Rational::from((60.0 / recipe.time) * product.amount);
-            let amount = amount_per_recipe * *v;
+            let amount_per_recipe = product.amount;
+            let amount = amount_per_recipe * (*v);
             println!("Adding {k} with {amount:?}: {}", product.item);
             provides_recipes
                 .entry(product.item)
@@ -34,7 +35,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
     let mut needs = BTreeMap::new();
     for (k, v) in &settings.outputs {
-        needs.insert(k.clone(), (output, Rational::from(*v)));
+        needs.insert(k.clone(), (output, Rat::from(*v)));
     }
 
     println!("{needs:?}");
@@ -63,7 +64,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             let edge = if let Some(e) = graph.find_edge(*provides_node, needs_node) {
                 e
             } else {
-                graph.add_edge(*provides_node, needs_node, Rational::ZERO)
+                graph.add_edge(*provides_node, needs_node, Rat::ZERO)
             };
 
             let edge_amount = graph.edge_weight_mut(edge).unwrap();
@@ -71,12 +72,12 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             let difference = if *provides_amount >= needs_amount {
                 let difference = *edge_amount + needs_amount;
                 *provides_amount = *provides_amount - needs_amount;
-                needs_amount = Rational::ZERO;
+                needs_amount = Rat::ZERO;
                 difference
             } else {
                 let difference = *edge_amount + *provides_amount;
                 needs_amount = needs_amount - *provides_amount;
-                *provides_amount = Rational::ZERO;
+                *provides_amount = Rat::ZERO;
                 difference
             };
 
@@ -89,8 +90,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             let needed_provides_recipes = difference / *provides_amount_per_recipe;
 
             for ingredient in &provides_recipe.ingredients {
-                let ingredient_per_recipe =
-                    Rational::from((60.0 / provides_recipe.time) * ingredient.amount);
+                let ingredient_per_recipe = ingredient.amount;
                 needs.insert(
                     ingredient.item,
                     (
@@ -115,10 +115,10 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
     }
 
-    for (needs_key, (needs_node, mut needs_amount)) in needs_resources {
+    for (needs_key, (needs_node, needs_amount)) in needs_resources {
         let resource_node = *resource_nodes.entry(needs_key).or_insert_with(|| {
             graph.add_node((
-                Rational::ZERO,
+                Rat::ZERO,
                 data.resources.get(&needs_key).unwrap().name.to_string(),
             ))
         });

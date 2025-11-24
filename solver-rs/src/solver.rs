@@ -1,5 +1,6 @@
-use crate::data::{Data, Form, ItemKey, RecipeKey, Settings};
-use crate::rational::Rational;
+use crate::data::{Data, Form, ItemKey, MachineKey, RecipeKey, Settings};
+use crate::rational::units::{Items, Megawatts, Points, Recipes, Unitless};
+use crate::rational::{ItemsPerMinute, Rat};
 use eyre::bail;
 use good_lp::solvers::highs::HighsProblem;
 use good_lp::{
@@ -146,8 +147,8 @@ impl Model {
 
     fn fix_input_amounts(&mut self, settings: &Settings, all_items: &HashSet<ItemKey>) {
         for item in all_items {
-            let input = settings.inputs.get(item).copied().unwrap_or(0.0);
-            self.constrain(constraint!(self.n[item] == input));
+            let input = settings.inputs.get(item).copied().unwrap_or(Rat::ZERO);
+            self.constrain(constraint!(self.n[item] == input.as_f64()));
         }
     }
 
@@ -158,7 +159,7 @@ impl Model {
 
         for (item, &amount) in &settings.outputs {
             if let Some(&x) = self.x.get(item) {
-                self.constrain(constraint!(x >= amount));
+                self.constrain(constraint!(x >= amount.as_f64()));
             } else {
                 panic!(
                     "Output item '{item}' not found in model items: {:?}.",
@@ -175,7 +176,7 @@ impl Model {
                     rv.products
                         .iter()
                         .filter(|p| &p.item == item)
-                        .map(|p| p.amount * 60.0 / rv.time * self.r[rk])
+                        .map(|p| p.amount.as_f64() * self.r[rk])
                 }));
             if let Some(i) = self.i.get(item) {
                 self.constrain(constraint::eq(expr, i))
@@ -193,7 +194,7 @@ impl Model {
                         .ingredients
                         .iter()
                         .filter(|p| &p.item == item)
-                        .map(|p| p.amount * 60.0 / recipe_data.time * self.r[recipe_key])
+                        .map(|p| p.amount.as_f64() * self.r[recipe_key])
                 }));
             if let Some(i) = self.i.get(item) {
                 self.constrain(constraint!(expr == i))
@@ -206,7 +207,7 @@ impl Model {
     fn add_resource_constraints(&mut self, settings: &Settings) {
         for (resource, &limit) in &settings.resource_limits {
             if let Some(&i) = self.i.get(resource) {
-                self.constraints.push(constraint!(i <= limit));
+                self.constraints.push(constraint!(i <= limit.as_f64()));
             } else {
                 panic!("Resource '{resource}' not found in model items.");
             }
@@ -217,7 +218,7 @@ impl Model {
         let expr = Expression::sum(
             recipes
                 .iter()
-                .map(|rk| data.recipes[rk].power_use * self.r[rk]),
+                .map(|rk| data.recipes[rk].power_use.as_f64() * self.r[rk]),
         ) + Expression::sum(
             self.i
                 .iter()
@@ -256,7 +257,11 @@ impl Model {
 
     fn calculate_buildings_scaled(&mut self, data: &Data, recipes: &HashSet<RecipeKey>) {
         let expr = Expression::sum(recipes.iter().map(|rk| {
-            ((data.recipes[rk].ingredients.len() + data.recipes[rk].products.len() - 1) as f64)
+            let recipe = &data.recipes[rk];
+            let combined_len = recipe.ingredients.len() + recipe.products.len();
+            (combined_len.checked_sub(1).unwrap_or_else(|| {
+                panic!("Recipe has no ingredients or products: {rk} {combined_len}")
+            }) as f64)
                 .powf(1.584963)
                 * self.r[rk]
                 / 3
@@ -264,11 +269,11 @@ impl Model {
         self.constrain(constraint!(expr == self.buildings_scaled));
     }
 
-    fn calculate_resources_scaled(&mut self, resource_weights: HashMap<ItemKey, f64>) {
+    fn calculate_resources_scaled(&mut self, resource_weights: HashMap<ItemKey, Rat<Unitless>>) {
         let expr = Expression::sum(
             resource_weights
                 .iter()
-                .filter_map(|(k, v)| self.i.get(k).map(|i| *v * *i)),
+                .filter_map(|(k, v)| self.i.get(k).map(|i| v.as_f64() * *i)),
         );
         self.constrain(constraint!(expr == self.resources_scaled));
     }
@@ -277,9 +282,9 @@ impl Model {
         let expr = Expression::sum(items.iter().filter_map(|ik| {
             data.items
                 .get(ik)
-                .filter(|item| item.points > 0.0 && item.form == Some(Form::Solid))
+                .filter(|item| item.points > Rat::ZERO && item.form == Some(Form::Solid))
                 .map(|item| item.points)
-                .map(|points| points * self.x[ik])
+                .map(|points| points.as_f64() * self.x[ik])
         }));
         self.constrain(constraint!(expr == self.sink_points));
     }
@@ -292,33 +297,33 @@ impl Model {
 
     pub fn disable_locked_recipes(&mut self, settings: &Settings, data: &Data) {
         let Some(phase) = settings.phase else { return };
-        let mut disabled = HashSet::new();
+        let mut disabled: HashSet<MachineKey> = HashSet::new();
         if phase < 5 {
-            disabled.insert("Build_Converter_C");
-            disabled.insert("Build_QuantumEncoder_C");
+            disabled.insert("Build_Converter_C".into());
+            disabled.insert("Build_QuantumEncoder_C".into());
         }
         if phase < 4 {
-            disabled.insert("Build_GeneratorNuclear_C");
-            disabled.insert("Build_HadronCollider_C");
+            disabled.insert("Build_GeneratorNuclear_C".into());
+            disabled.insert("Build_HadronCollider_C".into());
         }
         if phase < 3 {
-            disabled.insert("Build_OilRefinery_C");
-            disabled.insert("Build_Packager_C");
-            disabled.insert("Build_GeneratorFuel_C");
-            disabled.insert("Build_ManufacturerMk1_C");
+            disabled.insert("Build_OilRefinery_C".into());
+            disabled.insert("Build_Packager_C".into());
+            disabled.insert("Build_GeneratorFuel_C".into());
+            disabled.insert("Build_ManufacturerMk1_C".into());
         }
         if phase < 2 {
-            disabled.insert("Build_FoundryMk1_C");
-            disabled.insert("Build_GeneratorCoal_C");
+            disabled.insert("Build_FoundryMk1_C".into());
+            disabled.insert("Build_GeneratorCoal_C".into());
         }
         if phase < 1 {
-            disabled.insert("Build_AssemblerMk1_C");
+            disabled.insert("Build_AssemblerMk1_C".into());
         }
 
         for (k, r) in data
             .recipes
             .iter()
-            .filter(|(_, r)| disabled.contains(r.machine.as_str()))
+            .filter(|(_, r)| disabled.contains(&r.machine))
         {
             // println!("Disabling {:?}", r.name);
             self.fix_zero(self.r[k]);
@@ -420,8 +425,8 @@ impl PreparedModel {
             .filter(|(k, _)| *k != &"Desc_Water_C".into())
             .map(|(k, v)| (k.clone(), *v))
             .collect::<HashMap<_, _>>();
-        let avg_limit =
-            filtered_limits.values().copied().sum::<f64>() / (filtered_limits.len() as f64);
+        let avg_limit = filtered_limits.values().copied().sum::<ItemsPerMinute>()
+            / (Rat::<Unitless>::whole(filtered_limits.len() as i64));
         let resource_weights = keys
             .resources
             .iter()
@@ -515,6 +520,7 @@ impl SolvedProblem {
                 if recipe_val <= EPSILON {
                     continue;
                 }
+                let recipe_val = Rat::<Recipes>::from(recipe_val);
                 for ingredient in &data.recipes[recipe].ingredients {
                     if item != &ingredient.item {
                         continue;
@@ -523,7 +529,7 @@ impl SolvedProblem {
                     let recipe_data = &data.recipes[recipe];
                     products.insert(
                         recipe_data.name.clone(),
-                        ((60.0 / recipe_data.time) * ingredient.amount * recipe_val).into(),
+                        (ingredient.amount * recipe_val).into(),
                     );
                 }
             }
@@ -535,6 +541,7 @@ impl SolvedProblem {
             if recipe_val <= EPSILON {
                 continue;
             }
+            let recipe_val = Rat::<Recipes>::from(recipe_val);
 
             let ingredients: &mut HashMap<_, _> = ingredients_map
                 .entry(data.recipes[recipe].name.clone())
@@ -550,10 +557,7 @@ impl SolvedProblem {
                             .map(|i| i.name.clone())
                             .expect("must exist")
                     });
-                ingredients.insert(
-                    name,
-                    ((60.0 / data.recipes[recipe].time) * ingredient.amount * recipe_val).into(),
-                );
+                ingredients.insert(name, (ingredient.amount * recipe_val).into());
             }
         }
 
@@ -606,13 +610,13 @@ impl SolvedProblem {
 
 #[derive(Debug)]
 pub struct SolutionValues {
-    pub sink_points: Rational,
-    pub items_input: HashMap<ItemKey, (String, Rational)>,
-    pub items_output: HashMap<ItemKey, (String, Rational)>,
-    pub resources_needed: HashMap<ItemKey, (String, Rational)>,
-    pub items_needed: HashMap<ItemKey, (String, Rational)>,
-    pub recipes_used: HashMap<RecipeKey, (String, Rational)>,
-    pub power_produced: HashMap<ItemKey, Rational>,
+    pub sink_points: Rat<Points>,
+    pub items_input: HashMap<ItemKey, (String, ItemsPerMinute)>,
+    pub items_output: HashMap<ItemKey, (String, ItemsPerMinute)>,
+    pub resources_needed: HashMap<ItemKey, (String, ItemsPerMinute)>,
+    pub items_needed: HashMap<ItemKey, (String, ItemsPerMinute)>,
+    pub recipes_used: HashMap<RecipeKey, (String, Rat<Recipes>)>,
+    pub power_produced: HashMap<ItemKey, Rat<Megawatts>>,
 
     pub power_use: f64,
     pub item_use: f64,
@@ -621,6 +625,6 @@ pub struct SolutionValues {
     pub buildings_scaled: f64,
     pub resources_scaled: f64,
 
-    pub products_map: HashMap<String, HashMap<String, Rational>>,
-    pub ingredients_map: HashMap<String, HashMap<String, Rational>>,
+    pub products_map: HashMap<String, HashMap<String, ItemsPerMinute>>,
+    pub ingredients_map: HashMap<String, HashMap<String, ItemsPerMinute>>,
 }

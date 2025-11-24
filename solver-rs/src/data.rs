@@ -1,3 +1,5 @@
+use crate::rational::units::{Items, Machines, Megawatts, Per, Points, Recipes, Second};
+use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use lasso::Spur;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -79,11 +81,11 @@ impl<T> From<&str> for Key<T> {
 #[serde(deny_unknown_fields)]
 pub struct Settings {
     pub phase: Option<u8>,
-    pub resource_limits: HashMap<ItemKey, f64>,
+    pub resource_limits: HashMap<ItemKey, ItemsPerMinute>,
     pub weights: Weights,
     pub recipes_off: HashSet<RecipeKey>,
-    pub inputs: HashMap<ItemKey, f64>,
-    pub outputs: HashMap<ItemKey, f64>,
+    pub inputs: HashMap<ItemKey, ItemsPerMinute>,
+    pub outputs: HashMap<ItemKey, ItemsPerMinute>,
     pub max_item: Option<serde_json::Value>,
     #[serde(rename = "checkbox_Nuclear Waste")]
     pub force_nuclear_waste: bool,
@@ -91,7 +93,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn floor_resource_limits(&mut self, floor: f64) {
+    pub fn floor_resource_limits(&mut self, floor: ItemsPerMinute) {
         for v in self.resource_limits.values_mut() {
             if *v < floor {
                 *v = floor;
@@ -127,16 +129,16 @@ pub struct Data {
     pub machines: HashMap<MachineKey, Arc<Machine>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Item {
     pub name: String,
-    pub energy: Option<f64>,
+    pub energy: Option<Rat<Megawatts>>,
     pub form: Option<Form>,
-    pub points: f64,
+    pub points: Rat<Points>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub enum Form {
     #[serde(rename = "RF_SOLID")]
@@ -147,31 +149,79 @@ pub enum Form {
     Gas,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Resource {
     pub name: String,
-    pub energy: f64,
+    pub energy: Rat<Megawatts>,
     pub form: Form,
-    pub points: f64,
+    pub points: Rat<Points>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
+struct RawRecipe {
+    pub name: String,
+    pub time: Rat<Per<Second, Recipes>>,
+    pub ingredients: Vec<RawRecipeItem>,
+    pub products: Vec<RawRecipeItem>,
+    pub machine: MachineKey,
+    pub power_use: Rat<Per<Megawatts, Machines>>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+struct RawRecipeItem {
+    pub item: ItemKey,
+    pub amount: Rat<Items>,
+}
+
+#[derive(Debug)]
 pub struct Recipe {
     pub name: String,
-    pub time: f64,
     pub ingredients: Vec<RecipeItem>,
     pub products: Vec<RecipeItem>,
-    pub machine: String,
-    pub power_use: f64,
+    pub machine: MachineKey,
+    pub power_use: Rat<Per<Megawatts, Machines>>,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+impl<'de> Deserialize<'de> for Recipe {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = RawRecipe::deserialize(deserializer)?;
+
+        let time = raw.time.recip().to_per_minute().recip();
+
+        Ok(Recipe {
+            name: raw.name,
+            ingredients: raw
+                .ingredients
+                .into_iter()
+                .map(|i| RecipeItem {
+                    item: i.item,
+                    amount: i.amount / time,
+                })
+                .collect(),
+            products: raw
+                .products
+                .into_iter()
+                .map(|i| RecipeItem {
+                    item: i.item,
+                    amount: i.amount / time,
+                })
+                .collect(),
+            machine: raw.machine,
+            power_use: raw.power_use,
+        })
+    }
+}
+
+#[derive(Debug)]
 pub struct RecipeItem {
     pub item: ItemKey,
-    pub amount: f64,
+    pub amount: ItemsPerMinutePerRecipe,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

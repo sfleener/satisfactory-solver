@@ -1,23 +1,134 @@
+use crate::data::Recipe;
+use crate::rational::units::{Items, Minute, One, Per, Recipes, Second, Unitless};
+use num::rational::Rational64 as RawRat;
 use num::{FromPrimitive, Zero};
+use serde::{Deserialize, Deserializer};
 use std::fmt::{Debug, Formatter};
-use std::ops::{Add, Div, Mul, Sub};
+use std::iter::Sum;
+use std::marker::PhantomData as Boo;
+use std::ops::{Add, AddAssign, Div, Mul, Sub};
+
+pub mod units {
+    use std::any::type_name;
+    use std::fmt::{Debug, Display, Formatter};
+    use std::marker::PhantomData;
+
+    pub trait Unit {
+        fn new() -> Self;
+    }
+
+    impl<T> Unit for T
+    where
+        T: Default,
+    {
+        fn new() -> Self {
+            Self::default()
+        }
+    }
+
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Unitless;
+
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Points;
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Megawatts;
+
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Items;
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Recipes;
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Machines;
+
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Second;
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Minute;
+
+    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct One;
+
+    #[derive(Default, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    pub struct Per<N, D>(PhantomData<fn() -> N>, PhantomData<fn() -> D>);
+
+    impl<N, D> Per<N, D> {
+        pub fn new() -> Self {
+            Self(PhantomData, PhantomData)
+        }
+    }
+
+    impl<N, D> Debug for Per<N, D> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}/{}", type_name::<N>(), type_name::<D>())
+        }
+    }
+
+    impl<N, D> Display for Per<N, D> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}/{}", type_name::<N>(), type_name::<D>())
+        }
+    }
+}
+
+pub type ItemsPerMinute = Rat<Per<Items, Minute>>;
+pub type ItemsPerMinutePerRecipe = Rat<Per<Per<Items, Minute>, Recipes>>;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct Rational(num::rational::Rational64);
+pub struct Rat<Unit>(RawRat, Boo<fn() -> Unit>);
 
-impl Rational {
-    pub const ZERO: Self = Self(num::rational::Rational64::ZERO);
+impl<Unit> Rat<Unit> {
+    pub const ZERO: Self = Self(RawRat::ZERO, Boo);
+
+    pub fn new(numer: i64, denom: i64) -> Self {
+        Self(RawRat::new(numer, denom), Boo)
+    }
+
+    pub fn whole(numer: i64) -> Self {
+        Self(RawRat::from_integer(numer), Boo)
+    }
 
     pub fn is_zero(&self) -> bool {
         self.0.is_zero()
     }
 
-    pub fn reduced(&self) -> Rational {
-        Rational(self.0.reduced())
+    pub fn reduced(&self) -> Rat<Unit> {
+        Rat(self.0.reduced(), Boo)
+    }
+
+    pub fn as_f64(&self) -> f64 {
+        self.into()
     }
 }
 
-impl From<f64> for Rational {
+impl<'de, Unit> Deserialize<'de> for Rat<Unit> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(f64::deserialize(deserializer)?.into())
+    }
+}
+
+impl<Unit> From<&Rat<Unit>> for f64 {
+    fn from(value: &Rat<Unit>) -> Self {
+        *value.0.numer() as f64 / *value.0.denom() as f64
+    }
+}
+
+impl<Unit> From<Rat<Unit>> for f64 {
+    fn from(value: Rat<Unit>) -> Self {
+        *value.0.numer() as f64 / *value.0.denom() as f64
+    }
+}
+
+impl<Unit> From<i64> for Rat<Unit> {
+    fn from(value: i64) -> Self {
+        Rat::whole(value)
+    }
+}
+
+impl<Unit> From<f64> for Rat<Unit> {
     fn from(value: f64) -> Self {
         fn is_near(v: f64, expected: f64) -> bool {
             const EPSILON: f64 = 1e-5;
@@ -29,12 +140,10 @@ impl From<f64> for Rational {
         }
 
         if is_zero(value) {
-            return Self(num::rational::Rational64::ZERO);
+            return Self(RawRat::ZERO, Boo);
         }
 
-        let raw = num::rational::Rational64::from_f64(value)
-            .unwrap()
-            .reduced();
+        let raw = RawRat::from_f64(value).unwrap().reduced();
         let numer = *raw.numer();
         let denom = *raw.denom();
         let whole = numer / denom;
@@ -42,13 +151,13 @@ impl From<f64> for Rational {
         let fractional = fractional as f64 / denom as f64;
 
         if is_zero(fractional) {
-            return Self(num::rational::Rational64::new(whole, 1));
+            return Self(RawRat::new(whole, 1), Boo);
         }
 
         for i in 1i64..=20 {
             for j in 1..=i {
                 if is_near(fractional, j as f64 / i as f64) {
-                    return Self(num::rational::Rational64::new((whole * i) + j, i));
+                    return Self(RawRat::new((whole * i) + j, i), Boo);
                 }
             }
         }
@@ -57,7 +166,10 @@ impl From<f64> for Rational {
     }
 }
 
-impl Debug for Rational {
+impl<Unit> Debug for Rat<Unit>
+where
+    Unit: units::Unit + Debug,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let this = self.0.reduced();
         if *this.denom() == 1 {
@@ -67,6 +179,7 @@ impl Debug for Rational {
             let den = *this.denom();
 
             let whole = num / den;
+
             if whole != 0 {
                 write!(f, "{} {}/{}", whole, num % den, den)
             } else {
@@ -76,34 +189,109 @@ impl Debug for Rational {
     }
 }
 
-impl Add<Rational> for Rational {
-    type Output = Rational;
+impl<U> Add<Rat<U>> for Rat<U> {
+    type Output = Rat<U>;
 
-    fn add(self, rhs: Rational) -> Self::Output {
-        Self(self.0 + rhs.0)
+    fn add(self, rhs: Rat<U>) -> Self::Output {
+        Self(self.0 + rhs.0, Boo)
     }
 }
 
-impl Sub<Rational> for Rational {
-    type Output = Rational;
-
-    fn sub(self, rhs: Rational) -> Self::Output {
-        Self(self.0 - rhs.0)
+impl<U: Copy> AddAssign<Rat<U>> for Rat<U> {
+    fn add_assign(&mut self, rhs: Rat<U>) {
+        *self = *self + rhs
     }
 }
 
-impl Mul<Rational> for Rational {
-    type Output = Rational;
-
-    fn mul(self, rhs: Rational) -> Self::Output {
-        Self(self.0 * rhs.0)
+impl<U> Sum<Rat<U>> for Rat<U> {
+    fn sum<I: Iterator<Item = Rat<U>>>(iter: I) -> Self {
+        iter.fold(Rat::ZERO, |acc, a| acc + a)
     }
 }
 
-impl Div<Rational> for Rational {
-    type Output = Rational;
+impl<U> Sub<Rat<U>> for Rat<U> {
+    type Output = Rat<U>;
 
-    fn div(self, rhs: Rational) -> Self::Output {
-        Self(self.0 / rhs.0)
+    fn sub(self, rhs: Rat<U>) -> Self::Output {
+        Self(self.0 - rhs.0, Boo)
+    }
+}
+
+impl Rat<Second> {
+    pub fn to_minutes(self) -> Rat<Minute> {
+        Rat(self.0 / RawRat::from_integer(60), Boo)
+    }
+}
+
+impl<T> Rat<Per<T, Second>> {
+    pub fn to_per_minute(self) -> Rat<Per<T, Minute>> {
+        Rat(self.0 * RawRat::from_integer(60), Boo)
+    }
+}
+
+impl<T, V> Rat<Per<T, V>> {
+    pub fn recip(self) -> Rat<Per<V, T>> {
+        Rat(self.0.recip(), Boo)
+    }
+}
+
+impl<T> Rat<T> {
+    pub fn recip_raw(self) -> Rat<Per<One, T>> {
+        Rat(self.0.recip(), Boo)
+    }
+}
+
+impl<T, V> Rat<Per<One, Per<T, V>>> {
+    pub fn simplify(self) -> Rat<Per<V, T>> {
+        Rat(self.0, Boo)
+    }
+}
+
+macro_rules! impl_mul {
+    ($L:ty, $R:ty, $O:ty) => {
+        impl Mul<Rat<$R>> for Rat<$L> {
+            type Output = Rat<$O>;
+
+            fn mul(self, rhs: Rat<$R>) -> Self::Output {
+                Rat(self.0 * rhs.0, Boo)
+            }
+        }
+    };
+}
+
+macro_rules! impl_div {
+    ($L:ty, $R:ty, $O:ty) => {
+        impl Div<Rat<$R>> for Rat<$L> {
+            type Output = Rat<$O>;
+
+            fn div(self, rhs: Rat<$R>) -> Self::Output {
+                Rat(self.0 / rhs.0, Boo)
+            }
+        }
+    };
+}
+
+impl_mul!(Per<Per<Items, Minute>, Recipes>, Recipes, Per<Items, Minute>);
+
+impl_div!(Items, Second, Per<Items, Second>);
+impl_div!(Items, Minute, Per<Items, Minute>);
+impl_div!(Items, Per<Minute, Recipes>, Per<Per<Items, Minute>, Recipes>);
+impl_div!(Per<Items, Second>, Recipes, Per<Per<Items, Second>, Recipes>);
+impl_div!(Per<Items, Minute>, Recipes, Per<Per<Items, Minute>, Recipes>);
+impl_div!(Per<Items, Minute>, Per<Per<Items, Minute>, Recipes>, Recipes);
+
+impl Div<Rat<Unitless>> for ItemsPerMinute {
+    type Output = ItemsPerMinute;
+
+    fn div(self, rhs: Rat<Unitless>) -> Self::Output {
+        Rat(self.0 / rhs.0, Boo)
+    }
+}
+
+impl<T> Div<Rat<T>> for Rat<T> {
+    type Output = Rat<Unitless>;
+
+    fn div(self, rhs: Rat<T>) -> Self::Output {
+        Rat(self.0 / rhs.0, Boo)
     }
 }
