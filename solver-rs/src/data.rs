@@ -4,118 +4,74 @@ use serde::{Deserialize, Deserializer, Serialize};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 thread_local! {
     static INTERNER: RefCell<lasso::Rodeo> = RefCell::new(lasso::Rodeo::new());
 }
 
-#[derive(
-    Deserialize,
-    derive_more::Debug,
-    derive_more::Display,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-)]
-pub struct RecipeKey(Key);
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum RecipeKind {}
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ItemKind {}
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum MachineKind {}
 
-#[derive(
-    Deserialize,
-    derive_more::Debug,
-    derive_more::Display,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-)]
-pub struct ItemKey(Key);
+pub type RecipeKey = Key<RecipeKind>;
+pub type ItemKey = Key<ItemKind>;
+pub type MachineKey = Key<MachineKind>;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Key(Spur);
+pub struct Key<T>(Spur, PhantomData<fn() -> T>);
 
-impl<'de> Deserialize<'de> for Key {
+impl<'de, T> Deserialize<'de> for Key<T> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct FieldVisitor;
+        let s = String::deserialize(deserializer)?;
 
-        impl Visitor<'_> for FieldVisitor {
-            type Value = Key;
-
-            fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
-                formatter.write_str("string")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: Error,
-            {
-                Ok(v.into())
-            }
-
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: Error,
-            {
-                Visitor::visit_str(self, &v)
-            }
-        }
-
-        deserializer.deserialize_string(FieldVisitor)
+        Ok(s.into())
     }
 }
 
-impl ItemKey {
+impl<T> Key<T> {
     pub fn new_static(s: &'static str) -> Self {
-        Self(Key::new_static(s))
+        Self(
+            INTERNER.with(|l| l.borrow_mut().get_or_intern_static(s)),
+            PhantomData,
+        )
     }
 }
 
-impl Key {
-    pub fn new_static(s: &'static str) -> Self {
-        Self(INTERNER.with(|l| l.borrow_mut().get_or_intern_static(s)))
-    }
-}
-
-impl Debug for Key {
+impl<T> Debug for Key<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Display::fmt(self, f)
     }
 }
 
-impl Display for Key {
+impl<T> Display for Key<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         INTERNER.with(|l| f.write_str(l.borrow().resolve(&self.0)))
     }
 }
 
-impl<T> From<T> for ItemKey
-where
-    T: Into<Key>,
-{
-    fn from(value: T) -> Self {
-        ItemKey(value.into())
-    }
-}
-
-impl From<String> for Key {
+impl<T> From<String> for Key<T> {
     fn from(value: String) -> Self {
-        Self(INTERNER.with(|l| l.borrow_mut().get_or_intern(value)))
+        Self(
+            INTERNER.with(|l| l.borrow_mut().get_or_intern(value)),
+            PhantomData,
+        )
     }
 }
 
-impl From<&str> for Key {
+impl<T> From<&str> for Key<T> {
     fn from(value: &str) -> Self {
-        Self(INTERNER.with(|l| l.borrow_mut().get_or_intern(value)))
+        Self(
+            INTERNER.with(|l| l.borrow_mut().get_or_intern(value)),
+            PhantomData,
+        )
     }
 }
 
@@ -168,7 +124,7 @@ pub struct Data {
     pub items: HashMap<ItemKey, Arc<Item>>,
     pub resources: HashMap<ItemKey, Arc<Resource>>,
     pub recipes: HashMap<RecipeKey, Arc<Recipe>>,
-    pub machines: HashMap<Key, Arc<Machine>>,
+    pub machines: HashMap<MachineKey, Arc<Machine>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
