@@ -78,6 +78,7 @@ pub struct Rat<Unit>(RawRat, Boo<fn() -> Unit>);
 
 impl<Unit> Rat<Unit> {
     pub const ZERO: Self = Self(RawRat::ZERO, Boo);
+    pub const ONE: Self = Self(RawRat::ONE, Boo);
 
     pub fn new(numer: i64, denom: i64) -> Self {
         Self(RawRat::new(numer, denom), Boo)

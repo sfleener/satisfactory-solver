@@ -1,6 +1,6 @@
 use crate::data::{Data, ItemKey, Settings};
 use crate::rational::units::Recipes;
-use crate::rational::{ItemsPerMinute, Rat};
+use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use crate::solver::SolutionValues;
 use petgraph::Direction;
 use petgraph::dot::Dot;
@@ -116,7 +116,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     for (needs_key, (needs_node, needs_amount)) in needs_resources {
         let resource_node = *resource_nodes.entry(needs_key).or_insert_with(|| {
             graph.add_node((
-                Rat::ZERO,
+                needs_amount / ItemsPerMinutePerRecipe::ONE,
                 data.resources.get(&needs_key).unwrap().name.clone(),
             ))
         });
