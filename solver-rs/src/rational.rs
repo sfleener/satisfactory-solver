@@ -182,7 +182,7 @@ where
             if whole != 0 {
                 write!(f, "{} {}/{}", whole, num % den, den)
             } else {
-                write!(f, "{}/{}", num, den)
+                write!(f, "{num}/{den}")
             }
         }
     }
@@ -198,7 +198,7 @@ impl<U> Add<Rat<U>> for Rat<U> {
 
 impl<U: Copy> AddAssign<Rat<U>> for Rat<U> {
     fn add_assign(&mut self, rhs: Rat<U>) {
-        *self = *self + rhs
+        *self = *self + rhs;
     }
 }
 

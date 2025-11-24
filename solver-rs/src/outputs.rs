@@ -130,7 +130,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         let resource_node = *resource_nodes.entry(needs_key).or_insert_with(|| {
             graph.add_node((
                 Rat::ZERO,
-                data.resources.get(&needs_key).unwrap().name.to_string(),
+                data.resources.get(&needs_key).unwrap().name.clone(),
             ))
         });
         graph.add_edge(resource_node, needs_node, needs_amount);
@@ -157,7 +157,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         };
         ranks.insert(node, max + 1);
     }
-    println!("{:?}", ranks);
+    // println!("{ranks:?}");
 
     println!(
         "{:?}",

@@ -23,8 +23,8 @@ struct Keys {
 }
 
 fn extract_items(raw_data: &Data) -> Keys {
-    let resources = HashSet::from_iter(raw_data.resources.keys().cloned());
-    let recipes = HashSet::from_iter(raw_data.recipes.keys().cloned());
+    let resources: HashSet<_> = raw_data.resources.keys().copied().collect();
+    let recipes = raw_data.recipes.keys().copied().collect();
     let mut products = HashSet::default();
     let mut ingredients = HashSet::default();
 
@@ -35,7 +35,7 @@ fn extract_items(raw_data: &Data) -> Keys {
                 .iter()
                 .map(|p| &p.item)
                 .filter(|i| !raw_data.resources.contains_key(*i))
-                .cloned(),
+                .copied(),
         );
         ingredients.extend(
             recipe
@@ -43,14 +43,14 @@ fn extract_items(raw_data: &Data) -> Keys {
                 .iter()
                 .map(|p| &p.item)
                 .filter(|i| !raw_data.resources.contains_key(*i))
-                .cloned(),
+                .copied(),
         );
     }
 
     let mut all_items = HashSet::new();
-    all_items.extend(resources.iter().cloned());
-    all_items.extend(ingredients.iter().cloned());
-    all_items.extend(products.iter().cloned());
+    all_items.extend(resources.iter().copied());
+    all_items.extend(ingredients.iter().copied());
+    all_items.extend(products.iter().copied());
 
     Keys {
         resources,
@@ -120,10 +120,10 @@ impl Model {
 
         Model {
             problem,
-            n: all_items.iter().cloned().zip_eq(n).collect(),
-            x: all_items.iter().cloned().zip_eq(x).collect(),
-            i: all_items.iter().cloned().zip_eq(i).collect(),
-            r: recipes.iter().cloned().zip_eq(r).collect(),
+            n: all_items.iter().copied().zip_eq(n).collect(),
+            x: all_items.iter().copied().zip_eq(x).collect(),
+            i: all_items.iter().copied().zip_eq(i).collect(),
+            r: recipes.iter().copied().zip_eq(r).collect(),
             power_use,
             item_use,
             building_use,
@@ -177,7 +177,7 @@ impl Model {
                         .map(|p| p.amount.as_f64() * self.r[rk])
                 }));
             if let Some(i) = self.i.get(item) {
-                self.constrain(constraint::eq(expr, i))
+                self.constrain(constraint::eq(expr, i));
             } else {
                 panic!("Item '{item}' not found in model intermediate items.")
             }
@@ -195,9 +195,9 @@ impl Model {
                         .map(|p| p.amount.as_f64() * self.r[recipe_key])
                 }));
             if let Some(i) = self.i.get(item) {
-                self.constrain(constraint!(expr == i))
+                self.constrain(constraint!(expr == i));
             } else {
-                panic!("Item '{item}' not found in model intermediate items.")
+                panic!("Item '{item}' not found in model intermediate items.");
             }
         }
     }
@@ -260,7 +260,7 @@ impl Model {
             (combined_len.checked_sub(1).unwrap_or_else(|| {
                 panic!("Recipe has no ingredients or products: {rk} {combined_len}")
             }) as f64)
-                .powf(1.584963)
+                .powf(1.584_963)
                 * self.r[rk]
                 / 3
         }));
@@ -423,7 +423,7 @@ impl PreparedModel {
             .map(|(k, v)| (*k, *v))
             .collect::<HashMap<_, _>>();
         let avg_limit = filtered_limits.values().copied().sum::<ItemsPerMinute>()
-            / (Rat::<Unitless>::whole(filtered_limits.len() as i64));
+            / (Rat::<Unitless>::whole(filtered_limits.len().try_into().unwrap()));
         let resource_weights = keys
             .resources
             .iter()
@@ -504,8 +504,7 @@ impl SolvedProblem {
             let key = data
                 .items
                 .get(item)
-                .map(|i| i.name.clone())
-                .unwrap_or_else(|| data.resources[item].name.clone());
+                .map_or_else(|| data.resources[item].name.clone(), |i| i.name.clone());
             let products: &mut HashMap<_, _> = products_map.entry(key).or_default();
             for (recipe, var) in &self.vars.r {
                 let recipe_val = self.solution.value(*var);
@@ -536,16 +535,15 @@ impl SolvedProblem {
                 .entry(data.recipes[recipe].name.clone())
                 .or_default();
             for ingredient in &data.recipes[recipe].ingredients {
-                let name = data
-                    .items
-                    .get(&ingredient.item)
-                    .map(|i| i.name.clone())
-                    .unwrap_or_else(|| {
+                let name = data.items.get(&ingredient.item).map_or_else(
+                    || {
                         data.resources
                             .get(&ingredient.item)
                             .map(|i| i.name.clone())
                             .expect("must exist")
-                    });
+                    },
+                    |i| i.name.clone(),
+                );
                 ingredients.insert(name, ingredient.amount * recipe_val);
             }
         }
