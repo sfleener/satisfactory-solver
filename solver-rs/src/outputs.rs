@@ -3,10 +3,11 @@ use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, Rat};
 use crate::solver::SolutionValues;
 use petgraph::dot::Dot;
-use petgraph::graph::DiGraph;
-use petgraph::visit::EdgeRef;
+use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::visit::{EdgeRef, IntoNodeReferences};
 use petgraph::{Direction, EdgeDirection};
 use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::fmt::{Debug, Formatter};
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     let mut graph = DiGraph::<(Rat<Recipes>, String), ItemsPerMinute>::new();
@@ -135,7 +136,6 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         graph.add_edge(resource_node, needs_node, needs_amount);
     }
 
-    // assert!(provides_recipes.is_empty(), "{provides_recipes:?}");
     if !provides_recipes.is_empty() {
         for (k, v) in provides_recipes {
             let extra: ItemsPerMinute = v.values().into_iter().map(|(_, a)| *a).sum();
@@ -165,5 +165,53 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     }
     println!("{:?}", ranks);
 
-    println!("{:?}", Dot::new(&graph));
+    println!(
+        "{:?}",
+        DotGraphFmt {
+            graph: &graph,
+            ranks: &ranks
+        }
+    );
+}
+
+struct DotGraphFmt<'a> {
+    graph: &'a DiGraph<(Rat<Recipes>, String), ItemsPerMinute>,
+    ranks: &'a HashMap<NodeIndex, u16>,
+}
+
+impl Debug for DotGraphFmt<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut reverse_ranks: BTreeMap<_, Vec<_>> = BTreeMap::new();
+        for (k, v) in self.ranks {
+            reverse_ranks.entry(*v).or_default().push(*k);
+        }
+
+        f.write_str("flowchart TD\n")?;
+
+        for (rank, nodes) in reverse_ranks {
+            writeln!(f, "  subgraph L{rank}",)?;
+
+            for node in nodes {
+                let (count, name) = self.graph.node_weight(node).unwrap();
+                if count.is_zero() {
+                    writeln!(f, "    {}[output]", node.index(),)?;
+                } else {
+                    writeln!(f, "    {}[{:?} {}]", node.index(), count, name,)?;
+                }
+            }
+
+            writeln!(f, "  end")?;
+        }
+
+        for edge in self.graph.edge_references() {
+            writeln!(
+                f,
+                "  {} -->|{:?}| {}",
+                edge.source().index(),
+                edge.weight(),
+                edge.target().index(),
+            )?;
+        }
+        Ok(())
+    }
 }
