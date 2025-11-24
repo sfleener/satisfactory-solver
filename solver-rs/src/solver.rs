@@ -1,5 +1,5 @@
 use crate::data::{Data, Form, ItemKey, MachineKey, RecipeKey, Settings};
-use crate::rational::units::{Items, Megawatts, Points, Recipes, Unitless};
+use crate::rational::units::{Megawatts, Points, Recipes, Unitless};
 use crate::rational::{ItemsPerMinute, Rat};
 use eyre::bail;
 use good_lp::solvers::highs::HighsProblem;
@@ -8,11 +8,9 @@ use good_lp::{
     constraint, default_solver, variable,
 };
 use itertools::Itertools;
-use num::Float;
 use std::collections::{HashMap, HashSet};
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::iter::Sum;
-use std::ops::Add;
 
 type PreparedProblem = HighsProblem;
 
@@ -320,7 +318,7 @@ impl Model {
             disabled.insert("Build_AssemblerMk1_C".into());
         }
 
-        for (k, r) in data
+        for (k, _) in data
             .recipes
             .iter()
             .filter(|(_, r)| disabled.contains(&r.machine))
@@ -330,7 +328,7 @@ impl Model {
         }
     }
 
-    fn set_objective(mut self, settings: &Settings) -> PreparedModel {
+    fn set_objective(self, settings: &Settings) -> PreparedModel {
         let mut waste_penalty_expr = self.x[&"Desc_NuclearWaste_C".into()]
             + self.x[&"Desc_NonFissibleUranium_C".into()]
             + self.x[&"Desc_PlutoniumPellet_C".into()]
@@ -339,8 +337,7 @@ impl Model {
             + self.x[&"Desc_Ficsonium_C".into()];
 
         if settings.force_nuclear_waste {
-            waste_penalty_expr =
-                waste_penalty_expr + (self.x[&"Desc_PlutoniumFuelRod_C".into()] / 10);
+            waste_penalty_expr += self.x[&"Desc_PlutoniumFuelRod_C".into()] / 10;
         }
 
         let problem = match &settings.max_item {
@@ -423,19 +420,14 @@ impl PreparedModel {
             .resource_limits
             .iter()
             .filter(|(k, _)| *k != &"Desc_Water_C".into())
-            .map(|(k, v)| (k.clone(), *v))
+            .map(|(k, v)| (*k, *v))
             .collect::<HashMap<_, _>>();
         let avg_limit = filtered_limits.values().copied().sum::<ItemsPerMinute>()
             / (Rat::<Unitless>::whole(filtered_limits.len() as i64));
         let resource_weights = keys
             .resources
             .iter()
-            .map(|resource| {
-                (
-                    resource.clone(),
-                    avg_limit / settings.resource_limits[resource],
-                )
-            })
+            .map(|resource| (*resource, avg_limit / settings.resource_limits[resource]))
             .collect();
 
         model.calculate_power_use(data, &keys.recipes);
@@ -446,7 +438,7 @@ impl PreparedModel {
         model.calculate_resources_scaled(resource_weights);
         model.calculate_sink_points(data, &keys.products);
 
-        model.disable_off_recipes(&settings);
+        model.disable_off_recipes(settings);
         model.disable_locked_recipes(settings, data);
 
         model.set_objective(settings)
@@ -527,10 +519,7 @@ impl SolvedProblem {
                     }
 
                     let recipe_data = &data.recipes[recipe];
-                    products.insert(
-                        recipe_data.name.clone(),
-                        (ingredient.amount * recipe_val).into(),
-                    );
+                    products.insert(recipe_data.name.clone(), ingredient.amount * recipe_val);
                 }
             }
         }
@@ -557,7 +546,7 @@ impl SolvedProblem {
                             .map(|i| i.name.clone())
                             .expect("must exist")
                     });
-                ingredients.insert(name, (ingredient.amount * recipe_val).into());
+                ingredients.insert(name, ingredient.amount * recipe_val);
             }
         }
 
@@ -594,12 +583,12 @@ impl SolvedProblem {
                 .x
                 .iter()
                 .filter(|(k, _)| power_sources.contains(*k))
-                .map(|(k, v)| (k.clone(), self.solution.value(*v).into()))
+                .map(|(k, v)| (*k, self.solution.value(*v).into()))
                 .collect(),
             power_use: self.solution.value(self.vars.power_use),
-            item_use: self.solution.value(self.vars.item_use).into(),
-            buildings: self.solution.value(self.vars.building_use).into(),
-            resources: self.solution.value(self.vars.resource_use).into(),
+            item_use: self.solution.value(self.vars.item_use),
+            buildings: self.solution.value(self.vars.building_use),
+            resources: self.solution.value(self.vars.resource_use),
             buildings_scaled: self.solution.value(self.vars.buildings_scaled),
             resources_scaled: self.solution.value(self.vars.resources_scaled),
             products_map,

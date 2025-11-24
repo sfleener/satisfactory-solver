@@ -29,7 +29,7 @@ fn main() -> eyre::Result<()> {
     let data = BufReader::new(File::open("../ui/data/data.json")?);
     let data: Data = serde_json::from_reader(data)?;
 
-    let solved = PreparedModel::new(&data, &mut settings).solve()?;
+    let solved = PreparedModel::new(&data, &settings).solve()?;
     let values = solved.into_values(&settings, &data);
 
     // println!("{values:#?}");

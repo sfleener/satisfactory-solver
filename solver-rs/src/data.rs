@@ -1,7 +1,6 @@
 use crate::rational::units::{Items, Machines, Megawatts, Per, Points, Recipes, Second};
 use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use lasso::Spur;
-use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};

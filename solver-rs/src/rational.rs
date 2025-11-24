@@ -1,4 +1,3 @@
-use crate::data::Recipe;
 use crate::rational::units::{Items, Minute, One, Per, Recipes, Second, Unitless};
 use num::rational::Rational64 as RawRat;
 use num::{FromPrimitive, Zero};
@@ -224,7 +223,7 @@ impl Rat<Second> {
 }
 
 impl<T> Rat<Per<T, Second>> {
-    pub fn to_per_minute(self) -> Rat<Per<T, Minute>> {
+    pub fn to_per_minute(&self) -> Rat<Per<T, Minute>> {
         Rat(self.0 * RawRat::from_integer(60), Boo)
     }
 }

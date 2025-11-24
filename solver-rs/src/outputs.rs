@@ -2,10 +2,10 @@ use crate::data::{Data, Settings};
 use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, Rat};
 use crate::solver::SolutionValues;
+use petgraph::Direction;
 use petgraph::dot::Dot;
 use petgraph::graph::{DiGraph, NodeIndex};
-use petgraph::visit::{EdgeRef, IntoNodeReferences};
-use petgraph::{Direction, EdgeDirection};
+use petgraph::visit::EdgeRef;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fmt::{Debug, Formatter};
 
@@ -19,12 +19,12 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         let recipe = &data.recipes[recipe_key];
         let node = graph.add_node((recipe_val, recipe.name.clone()));
 
-        recipe_nodes.insert(recipe_key.clone(), (node, recipe.clone(), recipe_val));
+        recipe_nodes.insert(recipe_key, (node, recipe.clone(), recipe_val));
     }
 
     let mut needs = VecDeque::new();
     for (k, v) in &settings.outputs {
-        needs.push_back((k.clone(), (output, Rat::from(*v))));
+        needs.push_back((*k, (output, *v)));
     }
 
     let mut provides_recipes: BTreeMap<_, BTreeMap<_, _>> = BTreeMap::new();
@@ -68,9 +68,9 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         };
         assert!(!provides.is_empty());
         let mut to_remove = vec![];
-        for (provides_key, (provides_amount_per_recipe, provides_amount)) in &mut *provides {
+        for (provides_key, (_, provides_amount)) in &mut *provides {
             assert!(!provides_amount.is_zero());
-            let (provides_node, provides_recipe, _) = recipe_nodes.get(provides_key).unwrap();
+            let (provides_node, _, _) = recipe_nodes.get(provides_key).unwrap();
 
             let edge = if let Some(e) = graph.find_edge(*provides_node, needs_node) {
                 e
@@ -92,7 +92,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 difference
             };
 
-            *edge_amount = *edge_amount + difference;
+            *edge_amount += difference;
 
             if provides_amount.is_zero() {
                 to_remove.push(*provides_key);
@@ -138,7 +138,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
     if !provides_recipes.is_empty() {
         for (k, v) in provides_recipes {
-            let extra: ItemsPerMinute = v.values().into_iter().map(|(_, a)| *a).sum();
+            let extra: ItemsPerMinute = v.values().map(|(_, a)| *a).sum();
             let name = &data.items[&k].name;
             println!("Extra {name}: {extra:?}");
         }
