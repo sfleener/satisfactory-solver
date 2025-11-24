@@ -660,9 +660,9 @@ pub struct SolutionValues {
     pub power_produced: HashMap<Key, Rational>,
 
     pub power_use: f64,
-    pub item_use: Rational,
-    pub buildings: Rational,
-    pub resources: Rational,
+    pub item_use: f64,
+    pub buildings: f64,
+    pub resources: f64,
     pub buildings_scaled: f64,
     pub resources_scaled: f64,
 
