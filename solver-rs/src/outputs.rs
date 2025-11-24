@@ -146,18 +146,12 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
     let mut ranks = HashMap::new();
     let components = petgraph::algo::tarjan_scc(&graph);
-    for node in components.into_iter().flatten() {
-        if ranks.is_empty() {
-            assert_eq!(node, output);
-            ranks.insert(node, 0u16);
-            continue;
-        }
+    for node in components.into_iter().rev().flatten() {
         let Some(max) = graph
-            .edges_directed(node, Direction::Outgoing)
-            .map(|edge| ranks.get(&edge.target()).copied().unwrap())
+            .edges_directed(node, Direction::Incoming)
+            .map(|edge| ranks.get(&edge.source()).copied().unwrap())
             .max()
         else {
-            assert_eq!(node, output);
             ranks.insert(node, 0);
             continue;
         };
