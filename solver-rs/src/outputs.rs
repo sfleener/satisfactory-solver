@@ -98,19 +98,6 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 to_remove.push(*provides_key);
             }
 
-            // let needed_provides_recipes = difference / *provides_amount_per_recipe;
-            //
-            // for ingredient in &provides_recipe.ingredients {
-            //     let ingredient_per_recipe = ingredient.amount;
-            //     needs.push_back((
-            //         ingredient.item,
-            //         (
-            //             *provides_node,
-            //             ingredient_per_recipe * needed_provides_recipes,
-            //         ),
-            //     ));
-            // }
-
             if needs_amount.is_zero() {
                 break;
             }
@@ -190,7 +177,7 @@ impl Debug for DotGraphFmt<'_> {
             for node in nodes {
                 let (count, name) = self.graph.node_weight(node).unwrap();
                 if count.is_zero() {
-                    writeln!(f, "    {}[output]", node.index(),)?;
+                    writeln!(f, "    {}[{}]", node.index(), name)?;
                 } else {
                     writeln!(f, "    {}[{:?} {}]", node.index(), count, name,)?;
                 }
