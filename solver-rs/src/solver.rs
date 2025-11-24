@@ -6,7 +6,7 @@ use good_lp::{
     constraint, default_solver, variable,
 };
 use itertools::Itertools;
-use num::{Float, Integer, Signed};
+use num::{Float, FromPrimitive, Integer, Signed};
 use petgraph::data::Build;
 use petgraph::dot::Dot;
 use petgraph::graph::DiGraph;
@@ -637,12 +637,12 @@ impl SolvedProblem {
                 .filter(|(k, _)| power_sources.contains(*k))
                 .map(|(k, v)| (k.clone(), self.solution.value(*v).into()))
                 .collect(),
-            power_use: self.solution.value(self.vars.power_use).into(),
+            power_use: self.solution.value(self.vars.power_use),
             item_use: self.solution.value(self.vars.item_use).into(),
             buildings: self.solution.value(self.vars.building_use).into(),
             resources: self.solution.value(self.vars.resource_use).into(),
-            buildings_scaled: self.solution.value(self.vars.buildings_scaled).into(),
-            resources_scaled: self.solution.value(self.vars.resources_scaled).into(),
+            buildings_scaled: self.solution.value(self.vars.buildings_scaled),
+            resources_scaled: self.solution.value(self.vars.resources_scaled),
             products_map,
             ingredients_map,
         }
@@ -659,186 +659,77 @@ pub struct SolutionValues {
     pub recipes_used: HashMap<String, Rational>,
     pub power_produced: HashMap<Key, Rational>,
 
-    pub power_use: Rational,
+    pub power_use: f64,
     pub item_use: Rational,
     pub buildings: Rational,
     pub resources: Rational,
-    pub buildings_scaled: Rational,
-    pub resources_scaled: Rational,
+    pub buildings_scaled: f64,
+    pub resources_scaled: f64,
 
     pub products_map: HashMap<String, HashMap<String, Rational>>,
     pub ingredients_map: HashMap<String, HashMap<String, Rational>>,
 }
 
-#[derive(Copy, Clone)]
-struct Rational {
-    numerator: i64,
-    denominator: NonZeroI64,
-}
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+struct Rational(num::rational::Rational64);
 
-impl Rational {
-    const ZERO: Rational = Rational {
-        numerator: 0,
-        denominator: NonZeroI64::new(1).unwrap(),
-    };
-    const ONE: Rational = Rational {
-        numerator: 1,
-        denominator: NonZeroI64::new(1).unwrap(),
-    };
-
-    fn new(numerator: i64, denominator: NonZeroI64) -> Self {
-        Rational {
-            numerator,
-            denominator,
-        }
-        .reduce()
-    }
-
-    fn reduce(self) -> Self {
-        if self.numerator == 0 {
-            return Self::ZERO;
-        }
-        if self.numerator == self.denominator.get() {
-            return Self::ONE;
-        }
-
-        let gcd = self.numerator.gcd(&self.denominator.get());
-        if gcd == 1 {
-            self
-        } else {
-            Rational {
-                numerator: self.numerator / gcd,
-                denominator: NonZeroI64::new(self.denominator.get() / gcd).unwrap(),
-            }
-        }
-    }
-
-    fn recip(self) -> Self {
-        Rational {
-            numerator: self.denominator.get(),
-            denominator: NonZeroI64::new(self.numerator).unwrap(),
-        }
-    }
-
-    fn from_f64(mut v: f64) -> Self {
-        let neg = v.is_sign_negative();
-        if neg {
-            v = -v;
-        }
-
-        let v =
-            Self::from_f64_rec(v, 0).unwrap_or_else(|e| panic!("Cannot reduce value {v}: {e:?}"));
-
-        if neg { -v } else { v }
-    }
-
-    fn from_f64_rec(v: f64, depth: u16) -> eyre::Result<Self> {
-        const EPSILON: f64 = 1e-5;
-
-        if depth >= 1024 {
-            bail!("Reached depth {depth}, bailing on reduction of {v}")
-        }
-
-        if v < EPSILON {
-            return Ok(Rational::ZERO);
-        }
-
-        if v < 1.0 + EPSILON && v > 1.0 - EPSILON {
-            return Ok(Rational::ONE);
-        }
-
-        let whole_part = v.floor();
-        let iwhole_part = whole_part as i64;
-        if iwhole_part > 0 {
-            let iwhole_part = Rational {
-                numerator: iwhole_part,
-                denominator: NonZeroI64::new(1).unwrap(),
-            };
-            let fractional_part = v - whole_part;
-            Ok((Self::from_f64_rec(fractional_part, depth + 1)? + iwhole_part).reduce())
-        } else {
-            Ok(Self::from_f64_rec(v.recip(), depth + 1)?.recip().reduce())
-        }
-    }
-}
+impl Rational {}
 
 impl From<f64> for Rational {
     fn from(value: f64) -> Self {
-        Self::from_f64(value)
-    }
-}
-
-impl Add<Rational> for Rational {
-    type Output = Rational;
-
-    fn add(self, rhs: Rational) -> Self::Output {
-        if self.denominator == rhs.denominator {
-            return Rational {
-                numerator: self.numerator + rhs.numerator,
-                denominator: self.denominator,
-            };
+        fn is_near(v: f64, expected: f64) -> bool {
+            const EPSILON: f64 = 1e-5;
+            v <= expected + EPSILON && v >= expected - EPSILON
         }
 
-        let lcm = self.denominator.get().lcm(&rhs.denominator.get());
-
-        Rational {
-            numerator: (self.numerator * (lcm / self.denominator.get()))
-                + (rhs.numerator * (lcm / rhs.denominator.get())),
-            denominator: NonZeroI64::new(lcm).unwrap(),
+        fn is_zero(v: f64) -> bool {
+            is_near(v, 0.0)
         }
-    }
-}
 
-impl Neg for Rational {
-    type Output = Rational;
-
-    fn neg(self) -> Self::Output {
-        Self {
-            numerator: -self.numerator,
-            denominator: self.denominator,
+        if is_zero(value) {
+            return Self(num::rational::Rational64::ZERO);
         }
+
+        let raw = num::rational::Rational64::from_f64(value)
+            .unwrap()
+            .reduced();
+        let numer = *raw.numer();
+        let denom = *raw.denom();
+        let whole = numer / denom;
+        let fractional = numer % denom;
+        let fractional = fractional as f64 / denom as f64;
+
+        if is_zero(fractional) {
+            return Self(num::rational::Rational64::new(whole, 1));
+        }
+
+        for i in 1i64..=20 {
+            for j in 1..=i {
+                if is_near(fractional, j as f64 / i as f64) {
+                    return Self(num::rational::Rational64::new((whole * j) + i, j));
+                }
+            }
+        }
+
+        panic!("Irreducable float: {value}");
     }
 }
-
-impl PartialEq for Rational {
-    fn eq(&self, other: &Self) -> bool {
-        let this = self.reduce();
-        let other = other.reduce();
-        this.numerator == other.numerator && this.denominator == other.denominator
-    }
-}
-
-impl Eq for Rational {}
 
 impl Debug for Rational {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let this = self.reduce();
-        write!(f, "{}/{}", this.numerator, this.denominator)
-    }
-}
+        let this = self.0.reduced();
+        if *this.denom() == 1 {
+            Debug::fmt(this.numer(), f)
+        } else {
+            let num = *this.numer();
+            let den = *this.denom();
 
-impl Display for Rational {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(self, f)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rational_from_float() {
-        assert_eq!(Rational::from_f64(0.0), Rational::ZERO);
-        assert_eq!(Rational::from_f64(1.0), Rational::ONE);
-
-        assert_eq!(
-            Rational::from_f64(3.0 / 8.0),
-            Rational::new(3, NonZeroI64::new(8).unwrap())
-        );
-        assert_eq!(
-            Rational::from_f64(8.0 / 3.0),
-            Rational::new(8, NonZeroI64::new(3).unwrap())
-        );
+            let whole = num / den;
+            if whole != 0 {
+                write!(f, "{} {}/{}", whole, num % den, den)
+            } else {
+                write!(f, "{}/{}", num, den)
+            }
+        }
     }
 }
