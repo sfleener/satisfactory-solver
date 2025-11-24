@@ -706,7 +706,7 @@ impl From<f64> for Rational {
         for i in 1i64..=20 {
             for j in 1..=i {
                 if is_near(fractional, j as f64 / i as f64) {
-                    return Self(num::rational::Rational64::new((whole * j) + i, j));
+                    return Self(num::rational::Rational64::new((whole * i) + j, i));
                 }
             }
         }
