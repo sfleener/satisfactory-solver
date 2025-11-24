@@ -1,4 +1,4 @@
-use crate::data::{Data, Settings};
+use crate::data::{Data, ItemKey, Settings};
 use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, Rat};
 use crate::solver::SolutionValues;
@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fmt::{Debug, Formatter};
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
-    let mut graph = DiGraph::<(Rat<Recipes>, String), ItemsPerMinute>::new();
+    let mut graph = DiGraph::<(Rat<Recipes>, String), (ItemKey, ItemsPerMinute)>::new();
     let output = graph.add_node((Rat::ZERO, "output".to_string()));
     let mut recipe_nodes = HashMap::new();
     let mut resource_nodes = HashMap::new();
@@ -75,10 +75,10 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             let edge = if let Some(e) = graph.find_edge(*provides_node, needs_node) {
                 e
             } else {
-                graph.add_edge(*provides_node, needs_node, Rat::ZERO)
+                graph.add_edge(*provides_node, needs_node, (needs_key, Rat::ZERO))
             };
 
-            let edge_amount = graph.edge_weight_mut(edge).unwrap();
+            let (_, edge_amount) = graph.edge_weight_mut(edge).unwrap();
 
             let difference = if *provides_amount >= needs_amount {
                 let difference = *edge_amount + needs_amount;
@@ -133,7 +133,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 data.resources.get(&needs_key).unwrap().name.clone(),
             ))
         });
-        graph.add_edge(resource_node, needs_node, needs_amount);
+        graph.add_edge(resource_node, needs_node, (needs_key, needs_amount));
     }
 
     if !provides_recipes.is_empty() {
@@ -163,14 +163,16 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         "{:?}",
         DotGraphFmt {
             graph: &graph,
-            ranks: &ranks
+            ranks: &ranks,
+            data,
         }
     );
 }
 
 struct DotGraphFmt<'a> {
-    graph: &'a DiGraph<(Rat<Recipes>, String), ItemsPerMinute>,
+    graph: &'a DiGraph<(Rat<Recipes>, String), (ItemKey, ItemsPerMinute)>,
     ranks: &'a HashMap<NodeIndex, u16>,
+    data: &'a Data,
 }
 
 impl Debug for DotGraphFmt<'_> {
@@ -198,11 +200,16 @@ impl Debug for DotGraphFmt<'_> {
         }
 
         for edge in self.graph.edge_references() {
+            let (item, amount) = edge.weight();
             writeln!(
                 f,
-                "  {} -->|{:?}| {}",
+                "  {} -->|{:?} {}| {}",
                 edge.source().index(),
-                edge.weight(),
+                amount,
+                self.data
+                    .items
+                    .get(item)
+                    .map_or_else(|| &self.data.resources.get(item).unwrap().name, |i| &i.name),
                 edge.target().index(),
             )?;
         }
