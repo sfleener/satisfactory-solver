@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["cbc"]
 highs = ["good_lp/highs"]
 scip = ["good_lp/scip", "good_lp/scip_bundled"]
 cbc = ["good_lp/coin_cbc"]

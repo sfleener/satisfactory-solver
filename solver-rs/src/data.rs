@@ -85,6 +85,7 @@ pub struct Settings {
     pub recipes_off: HashSet<RecipeKey>,
     pub inputs: HashMap<ItemKey, ItemsPerMinute>,
     pub outputs: HashMap<ItemKey, ItemsPerMinute>,
+    pub extras: HashMap<ItemKey, ItemsPerMinute>,
     pub max_item: Option<serde_json::Value>,
     #[serde(rename = "checkbox_Nuclear Waste")]
     pub force_nuclear_waste: bool,

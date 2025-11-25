@@ -34,16 +34,12 @@ fn main() -> eyre::Result<()> {
         .outputs
         .insert("Desc_SpaceElevatorPart_5_C".into(), 1.into());
     settings
-        .outputs
+        .extras
         .insert("Desc_ModularFrameHeavy_C".into(), 10.into());
+    settings.extras.insert("Desc_Motor_C".into(), 10.into());
+    settings.extras.insert("Desc_Computer_C".into(), 10.into());
     settings
-        .outputs
-        .insert("Desc_Motor_C".into(), 10.into());
-    settings
-        .outputs
-        .insert("Desc_Computer_C".into(), 10.into());
-    settings
-        .outputs
+        .extras
         .insert("Desc_SteelPlateReinforced_C".into(), 20.into());
     settings.phase = Some(3);
 

@@ -39,6 +39,7 @@
     ],
     "inputs": {},
     "outputs": {},
+    "extras": {},
     "max_item": false,
     "checkbox_Nuclear Waste": false,
     "integer_recipes": true

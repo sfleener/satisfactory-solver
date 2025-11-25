@@ -2,7 +2,10 @@ use crate::data::{Data, Form, ItemKey, MachineKey, RecipeKey, Settings};
 use crate::rational::units::{Megawatts, Points, Recipes, Unitless};
 use crate::rational::{ItemsPerMinute, Rat};
 use eyre::bail;
-use good_lp::{constraint, variable, Constraint, Expression, ProblemVariables, Solution, SolutionStatus, SolverModel, Variable};
+use good_lp::{
+    Constraint, Expression, ProblemVariables, Solution, SolutionStatus, SolverModel, Variable,
+    constraint, variable,
+};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
@@ -11,15 +14,16 @@ use std::iter::Sum;
 #[cfg(feature = "scip")]
 type PreparedProblem = good_lp::solvers::scip::SCIPProblem;
 #[cfg(feature = "scip")]
-static SOLVER_FN: fn(good_lp::variable::UnsolvedProblem) -> PreparedProblem = good_lp::solvers::scip::scip;
+static SOLVER_FN: fn(variable::UnsolvedProblem) -> PreparedProblem = good_lp::solvers::scip::scip;
 #[cfg(all(feature = "highs", not(feature = "scip")))]
 type PreparedProblem = good_lp::solvers::highs::HighsProblem;
 #[cfg(all(feature = "highs", not(feature = "scip")))]
-static SOLVER_FN: fn(good_lp::variable::UnsolvedProblem) -> PreparedProblem = good_lp::solvers::highs::highs;
+static SOLVER_FN: fn(variable::UnsolvedProblem) -> PreparedProblem = good_lp::solvers::highs::highs;
 #[cfg(all(feature = "cbc", not(feature = "scip")))]
 type PreparedProblem = good_lp::solvers::coin_cbc::CoinCbcProblem;
 #[cfg(all(feature = "cbc", not(feature = "scip")))]
-static SOLVER_FN: fn(good_lp::variable::UnsolvedProblem) -> PreparedProblem = good_lp::solvers::coin_cbc::coin_cbc;
+static SOLVER_FN: fn(variable::UnsolvedProblem) -> PreparedProblem =
+    good_lp::solvers::coin_cbc::coin_cbc;
 
 struct Keys {
     resources: HashSet<ItemKey>,
@@ -69,10 +73,10 @@ fn extract_items(raw_data: &Data) -> Keys {
 }
 
 pub struct Variables {
-    pub n: HashMap<ItemKey, Variable>,
-    pub x: HashMap<ItemKey, Variable>,
-    pub i: HashMap<ItemKey, Variable>,
-    pub r: HashMap<RecipeKey, Variable>,
+    pub inputs: HashMap<ItemKey, Variable>,
+    pub outputs: HashMap<ItemKey, Variable>,
+    pub items: HashMap<ItemKey, Variable>,
+    pub recipes: HashMap<RecipeKey, Variable>,
     pub power_use: Variable,
     pub item_use: Variable,
     pub building_use: Variable,
@@ -85,10 +89,10 @@ pub struct Variables {
 pub struct Model {
     problem: ProblemVariables,
     constraints: Vec<Constraint>,
-    pub n: HashMap<ItemKey, Variable>,
-    pub x: HashMap<ItemKey, Variable>,
-    pub i: HashMap<ItemKey, Variable>,
-    pub r: HashMap<RecipeKey, Variable>,
+    pub inputs: HashMap<ItemKey, Variable>,
+    pub outputs: HashMap<ItemKey, Variable>,
+    pub items: HashMap<ItemKey, Variable>,
+    pub recipes: HashMap<RecipeKey, Variable>,
     pub power_use: Variable,
     pub item_use: Variable,
     pub building_use: Variable,
@@ -102,20 +106,20 @@ impl Model {
     pub fn define(
         settings: &Settings,
         all_items: &HashSet<ItemKey>,
-        recipes: &HashSet<RecipeKey>,
+        recipe_keys: &HashSet<RecipeKey>,
     ) -> Self {
         let mut problem = ProblemVariables::new();
 
-        let n = problem.add_vector(variable().name("n").min(0), all_items.len());
-        let x = problem.add_vector(variable().name("x").min(0), all_items.len());
-        let i = problem.add_vector(variable().name("i").min(0), all_items.len());
-        let r = problem.add_vector(
+        let inputs = problem.add_vector(variable().name("inputs").min(0), all_items.len());
+        let outputs = problem.add_vector(variable().name("outputs").min(0), all_items.len());
+        let items = problem.add_vector(variable().name("items").min(0), all_items.len());
+        let recipes = problem.add_vector(
             if settings.integer_recipes {
                 variable().name("r").min(0).integer()
             } else {
                 variable().name("r").min(0)
             },
-            recipes.len(),
+            recipe_keys.len(),
         );
         let power_use = problem.add(variable().name("power_use").min(0));
         let item_use = problem.add(variable().name("item_use").min(0));
@@ -127,10 +131,10 @@ impl Model {
 
         Model {
             problem,
-            n: all_items.iter().copied().zip_eq(n).collect(),
-            x: all_items.iter().copied().zip_eq(x).collect(),
-            i: all_items.iter().copied().zip_eq(i).collect(),
-            r: recipes.iter().copied().zip_eq(r).collect(),
+            inputs: all_items.iter().copied().zip_eq(inputs).collect(),
+            outputs: all_items.iter().copied().zip_eq(outputs).collect(),
+            items: all_items.iter().copied().zip_eq(items).collect(),
+            recipes: recipe_keys.iter().copied().zip_eq(recipes).collect(),
             power_use,
             item_use,
             building_use,
@@ -153,7 +157,7 @@ impl Model {
     fn fix_input_amounts(&mut self, settings: &Settings, all_items: &HashSet<ItemKey>) {
         for item in all_items {
             let input = settings.inputs.get(item).copied().unwrap_or(Rat::ZERO);
-            self.constrain(constraint!(self.n[item] == input.as_f64()));
+            self.constrain(constraint!(self.inputs[item] == input.as_f64()));
         }
     }
 
@@ -163,12 +167,29 @@ impl Model {
         }
 
         for (item, &amount) in &settings.outputs {
-            if let Some(&x) = self.x.get(item) {
+            if let Some(&x) = self.outputs.get(item) {
                 self.constrain(constraint!(x >= amount.as_f64()));
             } else {
                 panic!(
                     "Output item '{item}' not found in model items: {:?}.",
-                    self.x.keys()
+                    self.outputs.keys()
+                );
+            }
+        }
+    }
+
+    fn fix_extras_amount(&mut self, settings: &Settings) {
+        if settings.extras.is_empty() {
+            return;
+        }
+
+        for (item, &amount) in &settings.extras {
+            if let Some(&i) = self.items.get(item) {
+                self.constrain(constraint!(i >= amount.as_f64()));
+            } else {
+                panic!(
+                    "Extras item '{item}' not found in model items: {:?}.",
+                    self.outputs.keys()
                 );
             }
         }
@@ -176,14 +197,14 @@ impl Model {
 
     fn add_product_constraints(&mut self, products: &HashSet<ItemKey>, data: &Data) {
         for item in products {
-            let expr = self.n[item]
+            let expr = self.inputs[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(rk, rv)| {
                     rv.products
                         .iter()
                         .filter(|p| &p.item == item)
-                        .map(|p| p.amount.as_f64() * self.r[rk])
+                        .map(|p| p.amount.as_f64() * self.recipes[rk])
                 }));
-            if let Some(i) = self.i.get(item) {
+            if let Some(i) = self.items.get(item) {
                 self.constrain(constraint::eq(expr, i));
             } else {
                 panic!("Item '{item}' not found in model intermediate items.")
@@ -193,15 +214,15 @@ impl Model {
 
     fn add_ingredient_constraints(&mut self, ingredients: &HashSet<ItemKey>, data: &Data) {
         for item in ingredients {
-            let expr = self.x[item]
+            let expr = self.outputs[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(recipe_key, recipe_data)| {
                     recipe_data
                         .ingredients
                         .iter()
                         .filter(|p| &p.item == item)
-                        .map(|p| p.amount.as_f64() * self.r[recipe_key])
+                        .map(|p| p.amount.as_f64() * self.recipes[recipe_key])
                 }));
-            if let Some(i) = self.i.get(item) {
+            if let Some(i) = self.items.get(item) {
                 self.constrain(constraint!(expr == i));
             } else {
                 panic!("Item '{item}' not found in model intermediate items.");
@@ -211,7 +232,7 @@ impl Model {
 
     fn add_resource_constraints(&mut self, settings: &Settings) {
         for (resource, &limit) in &settings.resource_limits {
-            if let Some(&i) = self.i.get(resource) {
+            if let Some(&i) = self.items.get(resource) {
                 self.constraints.push(constraint!(i <= limit.as_f64()));
             } else {
                 panic!("Resource '{resource}' not found in model items.");
@@ -223,9 +244,9 @@ impl Model {
         let expr = Expression::sum(
             recipes
                 .iter()
-                .map(|rk| data.recipes[rk].power_use.as_f64() * self.r[rk]),
+                .map(|rk| data.recipes[rk].power_use.as_f64() * self.recipes[rk]),
         ) + Expression::sum(
-            self.i
+            self.items
                 .iter()
                 .filter(|(item, _)| data.resources.contains_key(*item))
                 .map(|(_, &item)| item * 0.168),
@@ -245,18 +266,18 @@ impl Model {
             items
                 .iter()
                 .filter(|item| excluded.iter().all(|e| e != *item))
-                .map(|item| self.i[item]),
+                .map(|item| self.items[item]),
         );
         self.constrain(constraint!(expr == self.item_use));
     }
 
     fn calculate_building_use(&mut self, recipes: &HashSet<RecipeKey>) {
-        let expr = Expression::sum(recipes.iter().map(|r| self.r[r]));
+        let expr = Expression::sum(recipes.iter().map(|r| self.recipes[r]));
         self.constrain(constraint!(expr == self.building_use));
     }
 
     fn calculate_resource_use(&mut self, settings: &Settings) {
-        let expr = Expression::sum(settings.resource_limits.keys().map(|item| self.i[item]));
+        let expr = Expression::sum(settings.resource_limits.keys().map(|item| self.items[item]));
         self.constrain(constraint!(expr == self.resource_use));
     }
 
@@ -268,7 +289,7 @@ impl Model {
                 panic!("Recipe has no ingredients or products: {rk} {combined_len}")
             }) as f64)
                 .powf(1.584_963)
-                * self.r[rk]
+                * self.recipes[rk]
                 / 3
         }));
         self.constrain(constraint!(expr == self.buildings_scaled));
@@ -278,7 +299,7 @@ impl Model {
         let expr = Expression::sum(
             resource_weights
                 .iter()
-                .filter_map(|(k, v)| self.i.get(k).map(|i| v.as_f64() * *i)),
+                .filter_map(|(k, v)| self.items.get(k).map(|i| v.as_f64() * *i)),
         );
         self.constrain(constraint!(expr == self.resources_scaled));
     }
@@ -289,14 +310,14 @@ impl Model {
                 .get(ik)
                 .filter(|item| item.points > Rat::ZERO && item.form == Some(Form::Solid))
                 .map(|item| item.points)
-                .map(|points| points.as_f64() * self.x[ik])
+                .map(|points| points.as_f64() * self.outputs[ik])
         }));
         self.constrain(constraint!(expr == self.sink_points));
     }
 
     fn disable_off_recipes(&mut self, settings: &Settings) {
         for recipe in &settings.recipes_off {
-            self.fix_zero(self.r[recipe]);
+            self.fix_zero(self.recipes[recipe]);
         }
     }
 
@@ -332,20 +353,20 @@ impl Model {
             .filter(|(_, r)| disabled.contains(&r.machine))
         {
             // println!("Disabling {:?}", r.name);
-            self.fix_zero(self.r[k]);
+            self.fix_zero(self.recipes[k]);
         }
     }
 
     fn set_objective(self, settings: &Settings) -> PreparedModel {
-        let mut waste_penalty_expr = self.x[&"Desc_NuclearWaste_C".into()]
-            + self.x[&"Desc_NonFissibleUranium_C".into()]
-            + self.x[&"Desc_PlutoniumPellet_C".into()]
-            + self.x[&"Desc_PlutoniumCell_C".into()]
-            + self.x[&"Desc_PlutoniumWaste_C".into()]
-            + self.x[&"Desc_Ficsonium_C".into()];
+        let mut waste_penalty_expr = self.outputs[&"Desc_NuclearWaste_C".into()]
+            + self.outputs[&"Desc_NonFissibleUranium_C".into()]
+            + self.outputs[&"Desc_PlutoniumPellet_C".into()]
+            + self.outputs[&"Desc_PlutoniumCell_C".into()]
+            + self.outputs[&"Desc_PlutoniumWaste_C".into()]
+            + self.outputs[&"Desc_Ficsonium_C".into()];
 
         if settings.force_nuclear_waste {
-            waste_penalty_expr += self.x[&"Desc_PlutoniumFuelRod_C".into()] / 10;
+            waste_penalty_expr += self.outputs[&"Desc_PlutoniumFuelRod_C".into()] / 10;
         }
 
         let problem = match &settings.max_item {
@@ -389,10 +410,10 @@ impl Model {
             .using(|c| SOLVER_FN(c))
             .with_all(self.constraints.clone());
         let variables = Variables {
-            n: self.n,
-            x: self.x,
-            i: self.i,
-            r: self.r,
+            inputs: self.inputs,
+            outputs: self.outputs,
+            items: self.items,
+            recipes: self.recipes,
             power_use: self.power_use,
             item_use: self.item_use,
             building_use: self.building_use,
@@ -420,6 +441,7 @@ impl PreparedModel {
         let mut model = Model::define(settings, &keys.all_items, &keys.recipes);
         model.fix_input_amounts(settings, &keys.all_items);
         model.fix_output_amount(settings);
+        model.fix_extras_amount(settings);
         model.add_product_constraints(&keys.products, data);
         model.add_ingredient_constraints(&keys.all_items, data);
         model.add_resource_constraints(settings);
@@ -487,7 +509,7 @@ impl SolvedProblem {
         let resources_needed = data
             .resources
             .iter()
-            .filter_map(|(k, _)| self.vars.i.get(k).map(|v| (k, self.solution.value(*v))))
+            .filter_map(|(k, _)| self.vars.items.get(k).map(|v| (k, self.solution.value(*v))))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| settings.resource_limits.contains_key(*k))
             .map(|(k, v)| (*k, (data.resources[k].name.clone(), v.into())))
@@ -496,14 +518,14 @@ impl SolvedProblem {
         let items_needed = data
             .items
             .iter()
-            .filter_map(|(k, _)| self.vars.i.get(k).map(|v| (k, self.solution.value(*v))))
+            .filter_map(|(k, _)| self.vars.items.get(k).map(|v| (k, self.solution.value(*v))))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| !settings.resource_limits.contains_key(*k))
             .map(|(k, v)| (*k, (data.items[k].name.clone(), v.into())))
             .collect();
 
         let mut products_map = HashMap::new();
-        for (item, var) in &self.vars.i {
+        for (item, var) in &self.vars.items {
             let item_val = self.solution.value(*var);
             if item_val <= EPSILON {
                 continue;
@@ -514,7 +536,7 @@ impl SolvedProblem {
                 .get(item)
                 .map_or_else(|| data.resources[item].name.clone(), |i| i.name.clone());
             let products: &mut HashMap<_, _> = products_map.entry(key).or_default();
-            for (recipe, var) in &self.vars.r {
+            for (recipe, var) in &self.vars.recipes {
                 let recipe_val = self.solution.value(*var);
                 if recipe_val <= EPSILON {
                     continue;
@@ -532,7 +554,7 @@ impl SolvedProblem {
         }
 
         let mut ingredients_map = HashMap::new();
-        for (recipe, var) in &self.vars.r {
+        for (recipe, var) in &self.vars.recipes {
             let recipe_val = self.solution.value(*var);
             if recipe_val <= EPSILON {
                 continue;
@@ -560,7 +582,7 @@ impl SolvedProblem {
             sink_points: self.solution.value(self.vars.sink_points).into(),
             items_input: self
                 .vars
-                .n
+                .inputs
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
@@ -568,7 +590,7 @@ impl SolvedProblem {
                 .collect(),
             items_output: self
                 .vars
-                .x
+                .outputs
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
@@ -578,7 +600,7 @@ impl SolvedProblem {
             items_needed,
             recipes_used: self
                 .vars
-                .r
+                .recipes
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
@@ -586,7 +608,7 @@ impl SolvedProblem {
                 .collect(),
             power_produced: self
                 .vars
-                .x
+                .outputs
                 .iter()
                 .filter(|(k, _)| power_sources.contains(*k))
                 .map(|(k, v)| (*k, self.solution.value(*v).into()))
