@@ -105,6 +105,7 @@ pub struct Model {
 impl Model {
     pub fn define(
         settings: &Settings,
+        data: &Data,
         all_items: &HashSet<ItemKey>,
         recipe_keys: &HashSet<RecipeKey>,
     ) -> Self {
@@ -113,14 +114,30 @@ impl Model {
         let inputs = problem.add_vector(variable().name("inputs").min(0), all_items.len());
         let outputs = problem.add_vector(variable().name("outputs").min(0), all_items.len());
         let items = problem.add_vector(variable().name("items").min(0), all_items.len());
-        let recipes = problem.add_vector(
+
+        let (solid, fluid): (Vec<_>, Vec<_>) =
+            data.recipes.iter().partition_map(|(k, r)| {
+                if r.products
+                    .iter()
+                    .filter(|i| data.items.contains_key(&i.item))
+                    .any(|i| data.items.get(&i.item).unwrap_or_else(|| panic!("Item not found in data: {:?}", i.item)).form == Some(Form::Solid))
+                {
+                    itertools::Either::Left(*k)
+                } else {
+                    itertools::Either::Right(*k)
+                }
+            });
+
+        let solid_recipes = problem.add_vector(
             if settings.integer_recipes {
-                variable().name("r").min(0).integer()
+                variable().name("recipes").min(0).integer()
             } else {
-                variable().name("r").min(0)
+                variable().name("recipes").min(0)
             },
-            recipe_keys.len(),
+            solid.len(),
         );
+        let fluid_recipes =
+            problem.add_vector(variable().name("fluid_recipes").min(0), fluid.iter().len());
         let power_use = problem.add(variable().name("power_use").min(0));
         let item_use = problem.add(variable().name("item_use").min(0));
         let building_use = problem.add(variable().name("building_use").min(0));
@@ -134,7 +151,12 @@ impl Model {
             inputs: all_items.iter().copied().zip_eq(inputs).collect(),
             outputs: all_items.iter().copied().zip_eq(outputs).collect(),
             items: all_items.iter().copied().zip_eq(items).collect(),
-            recipes: recipe_keys.iter().copied().zip_eq(recipes).collect(),
+            recipes: solid
+                .iter()
+                .copied()
+                .zip_eq(solid_recipes)
+                .chain(fluid.iter().copied().zip_eq(fluid_recipes))
+                .collect(),
             power_use,
             item_use,
             building_use,
@@ -168,7 +190,7 @@ impl Model {
 
         for (item, &amount) in &settings.outputs {
             if let Some(&x) = self.outputs.get(item) {
-                self.constrain(constraint!(x >= amount.as_f64()));
+                self.constrain(constraint!(x == amount.as_f64()));
             } else {
                 panic!(
                     "Output item '{item}' not found in model items: {:?}.",
@@ -438,7 +460,7 @@ pub struct PreparedModel {
 impl PreparedModel {
     pub fn new(data: &Data, settings: &Settings) -> Self {
         let keys = extract_items(data);
-        let mut model = Model::define(settings, &keys.all_items, &keys.recipes);
+        let mut model = Model::define(settings, data, &keys.all_items, &keys.recipes);
         model.fix_input_amounts(settings, &keys.all_items);
         model.fix_output_amount(settings);
         model.fix_extras_amount(settings);
