@@ -3,10 +3,15 @@ name = "solver-rs"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["cbc"]
+highs = ["good_lp/highs"]
+scip = ["good_lp/scip", "good_lp/scip_bundled"]
+cbc = ["good_lp/coin_cbc"]
+
 [dependencies]
-derive_more = { version = "2", features = ["debug", "display"] }
 eyre = "0.6"
-good_lp = { version = "1", default-features = false, features = ["highs"] }
+good_lp = { version = "1", default-features = false }
 itertools = "0.14"
 lasso = "0.7"
 num = "0.4"

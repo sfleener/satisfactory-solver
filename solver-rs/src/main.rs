@@ -10,7 +10,7 @@ mod rational;
 mod solver;
 
 fn main() -> eyre::Result<()> {
-    let settings = BufReader::new(File::open("../ui/data/default.json")?);
+    let settings = BufReader::new(File::open("data/default.json")?);
     let mut settings: Settings = serde_json::from_reader(settings)?;
 
     // settings
@@ -26,22 +26,42 @@ fn main() -> eyre::Result<()> {
 
     settings
         .outputs
-        .insert("Desc_SpaceElevatorPart_2_C".into(), 5.into());
+        .insert("Desc_SpaceElevatorPart_2_C".into(), 25.into());
     settings
         .outputs
-        .insert("Desc_SpaceElevatorPart_4_C".into(), 1.into());
+        .insert("Desc_SpaceElevatorPart_4_C".into(), 5.into());
     settings
         .outputs
         .insert("Desc_SpaceElevatorPart_5_C".into(), 1.into());
+    settings
+        .outputs
+        .insert("Desc_ModularFrameHeavy_C".into(), 10.into());
+    settings
+        .outputs
+        .insert("Desc_Motor_C".into(), 10.into());
+    settings
+        .outputs
+        .insert("Desc_Computer_C".into(), 10.into());
+    settings
+        .outputs
+        .insert("Desc_SteelPlateReinforced_C".into(), 20.into());
     settings.phase = Some(3);
 
     settings.floor_resource_limits(1e-5.into());
 
-    let data = BufReader::new(File::open("../ui/data/data.json")?);
+    let data = BufReader::new(File::open("data/data.json")?);
     let data: Data = serde_json::from_reader(data)?;
 
-    let solved = PreparedModel::new(&data, &settings).solve()?;
-    let values = solved.into_values(&settings, &data);
+    let values = loop {
+        let solved = match PreparedModel::new(&data, &settings).solve() {
+            Ok(solved) => solved,
+            Err(e) => {
+                println!("Retrying: {e}");
+                continue;
+            }
+        };
+        break solved.into_values(&settings, &data);
+    };
 
     // println!("{values:#?}");
 

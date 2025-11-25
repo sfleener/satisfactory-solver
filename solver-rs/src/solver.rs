@@ -2,17 +2,24 @@ use crate::data::{Data, Form, ItemKey, MachineKey, RecipeKey, Settings};
 use crate::rational::units::{Megawatts, Points, Recipes, Unitless};
 use crate::rational::{ItemsPerMinute, Rat};
 use eyre::bail;
-use good_lp::solvers::highs::HighsProblem;
-use good_lp::{
-    Constraint, Expression, ProblemVariables, Solution, SolutionStatus, SolverModel, Variable,
-    constraint, default_solver, variable,
-};
+use good_lp::{constraint, variable, Constraint, Expression, ProblemVariables, Solution, SolutionStatus, SolverModel, Variable};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::iter::Sum;
 
-type PreparedProblem = HighsProblem;
+#[cfg(feature = "scip")]
+type PreparedProblem = good_lp::solvers::scip::SCIPProblem;
+#[cfg(feature = "scip")]
+static SOLVER_FN: fn(good_lp::variable::UnsolvedProblem) -> PreparedProblem = good_lp::solvers::scip::scip;
+#[cfg(all(feature = "highs", not(feature = "scip")))]
+type PreparedProblem = good_lp::solvers::highs::HighsProblem;
+#[cfg(all(feature = "highs", not(feature = "scip")))]
+static SOLVER_FN: fn(good_lp::variable::UnsolvedProblem) -> PreparedProblem = good_lp::solvers::highs::highs;
+#[cfg(all(feature = "cbc", not(feature = "scip")))]
+type PreparedProblem = good_lp::solvers::coin_cbc::CoinCbcProblem;
+#[cfg(all(feature = "cbc", not(feature = "scip")))]
+static SOLVER_FN: fn(good_lp::variable::UnsolvedProblem) -> PreparedProblem = good_lp::solvers::coin_cbc::coin_cbc;
 
 struct Keys {
     resources: HashSet<ItemKey>,
@@ -379,7 +386,7 @@ impl Model {
             ),
         };
         let problem = problem
-            .using(default_solver)
+            .using(|c| SOLVER_FN(c))
             .with_all(self.constraints.clone());
         let variables = Variables {
             n: self.n,
@@ -450,7 +457,7 @@ impl PreparedModel {
         match result.status() {
             SolutionStatus::Optimal => {}
             SolutionStatus::TimeLimit => {
-                bail!("Solution hit time limit");
+                panic!("Solution hit time limit");
             }
             SolutionStatus::GapLimit => {
                 bail!("Solution hit gap limit");
