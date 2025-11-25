@@ -3,9 +3,11 @@ use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use crate::solver::SolutionValues;
 use petgraph::Direction;
+use petgraph::data::DataMap;
 use petgraph::dot::Dot;
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::visit::EdgeRef;
+use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fmt::{Debug, Formatter};
 
@@ -50,15 +52,22 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
     println!("{needs:?}");
 
-    let mut needs_resources = BTreeMap::new();
+    let mut needs_resources: BTreeMap<_, Vec<_>> = BTreeMap::new();
 
     while let Some((needs_key, (needs_node, mut needs_amount))) = needs.pop_front() {
+        println!(
+            "checking {:?} needs {needs_amount:?} of {needs_key}",
+            graph.node_weight(needs_node)
+        );
         if data.resources.contains_key(&needs_key) {
-            needs_resources.insert(needs_key, (needs_node, needs_amount));
+            println!("Is resource, checking after");
+            needs_resources
+                .entry(needs_key)
+                .or_default()
+                .push((needs_node, needs_amount));
             continue;
         }
 
-        println!("checking needs {needs_amount:?} of {needs_key}");
         assert!(!needs_amount.is_zero());
         let Some(provides) = provides_recipes.get_mut(&needs_key) else {
             panic!(
@@ -113,14 +122,27 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
     }
 
-    for (needs_key, (needs_node, needs_amount)) in needs_resources {
-        let resource_node = *resource_nodes.entry(needs_key).or_insert_with(|| {
-            graph.add_node((
-                needs_amount / ItemsPerMinutePerRecipe::ONE,
-                data.resources.get(&needs_key).unwrap().name.clone(),
-            ))
-        });
-        graph.add_edge(resource_node, needs_node, (needs_key, needs_amount));
+    for (needs_key, needs) in needs_resources {
+        for (needs_node, needs_amount) in needs {
+            println!(
+                "Needed resource {:?}: {:?} {:?}",
+                needs_key,
+                needs_amount,
+                graph.node_weight(needs_node)
+            );
+
+            let new_value = needs_amount / ItemsPerMinutePerRecipe::ONE;
+
+            let resource_node = *resource_nodes.entry(needs_key).or_insert_with(|| {
+                graph.add_node((
+                    Rat::ZERO,
+                    data.resources.get(&needs_key).unwrap().name.clone(),
+                ))
+            });
+            let weight = &mut graph.node_weight_mut(resource_node).unwrap().0;
+            *weight = *weight + new_value;
+            graph.add_edge(resource_node, needs_node, (needs_key, needs_amount));
+        }
     }
 
     if !provides_recipes.is_empty() {
@@ -131,20 +153,34 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
     }
 
-    let mut ranks = HashMap::new();
+    let mut ranks: HashMap<NodeIndex, u16> = HashMap::new();
     let components = petgraph::algo::tarjan_scc(&graph);
-    for node in components.into_iter().rev().flatten() {
-        let Some(max) = graph
-            .edges_directed(node, Direction::Incoming)
-            .filter_map(|edge| ranks.get(&edge.source()).copied())
-            .max()
-        else {
-            ranks.insert(node, 0);
-            continue;
-        };
-        ranks.insert(node, max + 1);
+
+    for nodes in components.into_iter().rev() {
+        for node in &nodes {
+            let Some(max) = graph
+                .edges_directed(*node, Direction::Incoming)
+                .filter_map(|edge| ranks.get(&edge.source()).copied())
+                .max()
+            else {
+                ranks.insert(*node, 0);
+                continue;
+            };
+            ranks.insert(*node, max + 1);
+        }
+        if nodes.len() > 1 {
+            let component_rank = nodes.iter().map(|node| ranks[node]).min().unwrap();
+            for node in nodes {
+                ranks.insert(node, component_rank);
+            }
+        }
     }
-    // println!("{ranks:?}");
+
+    // for (rank, nodes) in components.into_iter().enumerate() {
+    //     for node in nodes {
+    //         ranks.insert(node, rank as u16);
+    //     }
+    // }
 
     println!(
         "{:?}",
