@@ -115,18 +115,23 @@ impl Model {
         let outputs = problem.add_vector(variable().name("outputs").min(0), all_items.len());
         let items = problem.add_vector(variable().name("items").min(0), all_items.len());
 
-        let (solid, fluid): (Vec<_>, Vec<_>) =
-            data.recipes.iter().partition_map(|(k, r)| {
-                if r.products
-                    .iter()
-                    .filter(|i| data.items.contains_key(&i.item))
-                    .any(|i| data.items.get(&i.item).unwrap_or_else(|| panic!("Item not found in data: {:?}", i.item)).form == Some(Form::Solid))
-                {
-                    itertools::Either::Left(*k)
-                } else {
-                    itertools::Either::Right(*k)
-                }
-            });
+        let (solid, fluid): (Vec<_>, Vec<_>) = data.recipes.iter().partition_map(|(k, r)| {
+            if r.products
+                .iter()
+                .filter(|i| data.items.contains_key(&i.item))
+                .any(|i| {
+                    data.items
+                        .get(&i.item)
+                        .unwrap_or_else(|| panic!("Item not found in data: {:?}", i.item))
+                        .form
+                        == Some(Form::Solid)
+                })
+            {
+                itertools::Either::Left(*k)
+            } else {
+                itertools::Either::Right(*k)
+            }
+        });
 
         let solid_recipes = problem.add_vector(
             if settings.integer_recipes {
@@ -501,7 +506,7 @@ impl PreparedModel {
         match result.status() {
             SolutionStatus::Optimal => {}
             SolutionStatus::TimeLimit => {
-                panic!("Solution hit time limit");
+                bail!("Solution hit time limit");
             }
             SolutionStatus::GapLimit => {
                 bail!("Solution hit gap limit");

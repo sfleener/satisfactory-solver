@@ -3,11 +3,9 @@ use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use crate::solver::SolutionValues;
 use petgraph::Direction;
-use petgraph::data::DataMap;
 use petgraph::dot::Dot;
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::visit::EdgeRef;
-use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fmt::{Debug, Formatter};
 
@@ -16,12 +14,18 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     let output = graph.add_node((Rat::ZERO, "output".to_string()));
     let mut recipe_nodes = HashMap::new();
     let mut resource_nodes = HashMap::new();
+    let mut input_nodes = HashMap::new();
 
     for (recipe_key, &(_, recipe_val)) in &values.recipes_used {
         let recipe = &data.recipes[recipe_key];
         let node = graph.add_node((recipe_val, recipe.name.clone()));
 
         recipe_nodes.insert(recipe_key, (node, recipe.clone(), recipe_val));
+    }
+
+    for (k, (name, v)) in &values.items_input {
+        let node = graph.add_node((*v / ItemsPerMinutePerRecipe::ONE, name.clone()));
+        input_nodes.insert(*k, node);
     }
 
     let mut needs = VecDeque::new();
@@ -50,6 +54,11 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
     }
 
+    let mut provides_inputs = BTreeMap::new();
+    for (k, (_, amount)) in &values.items_input {
+        provides_inputs.insert(*k, (input_nodes[k], *amount));
+    }
+
     println!("{needs:?}");
 
     let mut needs_resources: BTreeMap<_, Vec<_>> = BTreeMap::new();
@@ -69,6 +78,36 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
 
         assert!(!needs_amount.is_zero());
+        if let Some((provides_node, provides_amount)) = provides_inputs.get_mut(&needs_key)
+            && !provides_amount.is_zero()
+        {
+            let edge = if let Some(e) = graph.find_edge(*provides_node, needs_node) {
+                e
+            } else {
+                graph.add_edge(*provides_node, needs_node, (needs_key, Rat::ZERO))
+            };
+
+            let (_, edge_amount) = graph.edge_weight_mut(edge).unwrap();
+
+            let difference = if *provides_amount >= needs_amount {
+                let difference = *edge_amount + needs_amount;
+                *provides_amount = *provides_amount - needs_amount;
+                needs_amount = Rat::ZERO;
+                difference
+            } else {
+                let difference = *edge_amount + *provides_amount;
+                needs_amount = needs_amount - *provides_amount;
+                *provides_amount = Rat::ZERO;
+                difference
+            };
+
+            *edge_amount += difference;
+
+            if needs_amount.is_zero() {
+                continue;
+            }
+        }
+
         let Some(provides) = provides_recipes.get_mut(&needs_key) else {
             panic!(
                 "No recipes remaining that provide {needs_amount:?} {needs_key}: {provides_recipes:?}\n{:?}",
@@ -148,7 +187,11 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     if !provides_recipes.is_empty() {
         for (k, v) in &provides_recipes {
             let extra: ItemsPerMinute = v.values().map(|(_, a)| *a).sum();
-            let name = &data.items[&k].name;
+            let name = &data
+                .items
+                .get(&k)
+                .map(|i| &i.name)
+                .unwrap_or_else(|| &data.resources[&k].name);
             println!("Extra {name}: {extra:?}");
         }
     }
@@ -188,6 +231,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             graph: &graph,
             ranks: &ranks,
             data,
+            extra_inputs: &provides_inputs,
             extras: &provides_recipes,
         }
     );
@@ -197,6 +241,7 @@ struct DotGraphFmt<'a> {
     graph: &'a DiGraph<(Rat<Recipes>, String), (ItemKey, ItemsPerMinute)>,
     ranks: &'a HashMap<NodeIndex, u16>,
     data: &'a Data,
+    extra_inputs: &'a BTreeMap<ItemKey, (NodeIndex, ItemsPerMinute)>,
     extras: &'a BTreeMap<ItemKey, BTreeMap<RecipeKey, (ItemsPerMinutePerRecipe, ItemsPerMinute)>>,
 }
 
@@ -225,9 +270,26 @@ impl Debug for DotGraphFmt<'_> {
         }
 
         writeln!(f, "  subgraph Extras")?;
+        for (k, (_, extra)) in self.extra_inputs {
+            if extra.is_zero() {
+                continue;
+            }
+            let name = &self
+                .data
+                .items
+                .get(&k)
+                .map(|i| &i.name)
+                .unwrap_or_else(|| &self.data.resources[&k].name);
+            writeln!(f, "    {k}[{extra:?} {name}]",)?;
+        }
         for (k, v) in self.extras {
             let extra: ItemsPerMinute = v.values().map(|(_, a)| *a).sum();
-            let name = &self.data.items[&k].name;
+            let name = &self
+                .data
+                .items
+                .get(&k)
+                .map(|i| &i.name)
+                .unwrap_or_else(|| &self.data.resources[&k].name);
             writeln!(f, "    {k}[{extra:?} {name}]",)?;
         }
         writeln!(f, "  end")?;
