@@ -359,6 +359,7 @@ impl Model {
         if phase < 4 {
             disabled.insert("Build_GeneratorNuclear_C".into());
             disabled.insert("Build_HadronCollider_C".into());
+            disabled.insert("Build_Blender_C".into());
         }
         if phase < 3 {
             disabled.insert("Build_OilRefinery_C".into());
