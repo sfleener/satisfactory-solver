@@ -17,29 +17,44 @@ fn main() -> eyre::Result<()> {
     // settings.weights.item_use = 0.4;
     // settings.weights.buildings_scaled = 30.0;
 
-    // settings
-    //     .outputs
-    //     .insert("Desc_SpaceElevatorPart_2_C".into(), 25.into());
-    // settings
-    //     .outputs
-    //     .insert("Desc_SpaceElevatorPart_4_C".into(), 5.into());
-    // settings
-    //     .outputs
-    //     .insert("Desc_SpaceElevatorPart_5_C".into(), 1.into());
-    // settings
-    //     .extras
-    //     .insert("Desc_ModularFrameHeavy_C".into(), 10.into());
-    // settings.extras.insert("Desc_Motor_C".into(), 10.into());
-    // settings.extras.insert("Desc_Computer_C".into(), 10.into());
-    // settings
-    //     .extras
-    //     .insert("Desc_SteelPlateReinforced_C".into(), 20.into());
-    //
-    // settings.inputs.insert("Desc_Plastic_C".into(), 360.into());
-    // settings.inputs.insert("Desc_Rubber_C".into(), 480.into());
+    settings
+        .outputs
+        .insert("Desc_SpaceElevatorPart_2_C".into(), 25.into());
+    settings
+        .outputs
+        .insert("Desc_SpaceElevatorPart_4_C".into(), 5.into());
+    settings
+        .outputs
+        .insert("Desc_SpaceElevatorPart_5_C".into(), 1.into());
+    settings
+        .extras
+        .insert("Desc_ModularFrameHeavy_C".into(), 10.into());
+    settings.extras.insert("Desc_Motor_C".into(), 10.into());
+    settings.extras.insert("Desc_Computer_C".into(), 10.into());
+    settings
+        .extras
+        .insert("Desc_SteelPlateReinforced_C".into(), 20.into());
 
-    settings.outputs.insert("Desc_Plastic_C".into(), 420.into());
-    settings.outputs.insert("Desc_Rubber_C".into(), 560.into());
+    settings.inputs.insert("Desc_Plastic_C".into(), 360.into());
+    settings.inputs.insert("Desc_Rubber_C".into(), 480.into());
+
+    // settings.outputs.insert("Desc_Plastic_C".into(), 420.into());
+    // settings.outputs.insert("Desc_Rubber_C".into(), 560.into());
+
+    settings
+        .recipes_off
+        .insert("Recipe_Alternate_PureQuartzCrystal_C".into());
+    settings
+        .recipes_off
+        .insert("Recipe_Alternate_PureIronIngot_C".into());
+    settings
+        .recipes_off
+        .insert("Recipe_Alternate_PureCopperIngot_C".into());
+    settings
+        .recipes_off
+        .insert("Recipe_Alternate_PureCateriumIngot_C".into());
+    // settings.recipes_off.insert("Recipe_PureAluminumIngot_C".into());
+
     settings.phase = Some(3);
 
     settings.floor_resource_limits(1e-5.into());

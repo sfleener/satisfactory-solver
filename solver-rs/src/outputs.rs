@@ -2,11 +2,12 @@ use crate::data::{Data, ItemKey, RecipeKey, Settings};
 use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use crate::solver::SolutionValues;
+use itertools::Itertools;
 use petgraph::Direction;
 use petgraph::dot::Dot;
 use petgraph::graph::{DiGraph, NodeIndex};
-use petgraph::visit::EdgeRef;
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use petgraph::visit::{EdgeRef, IntoEdgesDirected};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::fmt::{Debug, Formatter};
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
@@ -199,8 +200,8 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     let mut ranks: HashMap<NodeIndex, u16> = HashMap::new();
     let components = petgraph::algo::tarjan_scc(&graph);
 
-    for nodes in components.into_iter().rev() {
-        for node in &nodes {
+    for nodes in components.iter().rev() {
+        for node in nodes {
             let Some(max) = graph
                 .edges_directed(*node, Direction::Incoming)
                 .filter_map(|edge| ranks.get(&edge.source()).copied())
@@ -214,8 +215,33 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         if nodes.len() > 1 {
             let component_rank = nodes.iter().map(|node| ranks[node]).min().unwrap();
             for node in nodes {
-                ranks.insert(node, component_rank);
+                ranks.insert(*node, component_rank);
             }
+        }
+    }
+
+    for (rank, group) in ranks
+        .iter()
+        .sorted_by_key(|(_, v)| **v)
+        .chunk_by(|(_, v)| **v)
+        .into_iter()
+        .sorted_by_key(|(r, _)| *r)
+    {
+        println!("~~~ LAYER {rank} ~~~");
+        for (&node, _) in group {
+            let (amount, name) = graph.node_weight(node).unwrap();
+            let incoming = graph
+                .edges_directed(node, Direction::Incoming)
+                .map(|edge| *ranks.get(&edge.source()).unwrap())
+                .collect::<BTreeSet<_>>();
+            let outgoing = graph
+                .edges_directed(node, Direction::Outgoing)
+                .map(|edge| *ranks.get(&edge.target()).unwrap())
+                .collect::<BTreeSet<_>>();
+            println!(
+                "{:?} {}: {:?} --> {} --> {:?}",
+                amount, name, incoming, rank, outgoing
+            );
         }
     }
 
