@@ -1,0 +1,365 @@
+Extra Water: 630
+Extra Concrete: 26 1/4
+Extra Silica: 12 1/2
+Extra Iron Plate: 15
+Extra Steel Beam: 7 1/2
+Extra Aluminum Ingot: 7 1/2
+Extra Petroleum Coke: 15
+Extra Wire: 15
+Extra Reinforced Iron Plate: 1 1/2
+Extra Rotor: 15/16
+Extra Copper Sheet: 12 1/2
+Extra Modular Frame: 1 1/2
+Extra Screw: 195
+Extra Crystal Oscillator: 5/24
+Extra Motor: 6 15/16
+Extra Supercomputer: 1
+Extra Cooling System: 1/2
+Extra Turbo Motor: 5/16
+Extra Steel Pipe: 9 1/2
+Extra Fused Modular Frame: 1
+Extra Radio Control Unit: 1/16
+Extra Caterium Ingot: 4 1/2
+Extra Circuit Board: 7 1/2
+Extra Plastic: 6 1/2
+Extra Encased Industrial Beam: 3 3/4
+Extra Rubber: 14 3/8
+Extra Heavy Oil Residue: 60
+Extra Quartz Crystal: 11 1/4
+Extra Steel Ingot: 80
+Extra Versatile Framework: 2 1/2
+Extra Copper Ingot: 45 1/2
+Extra Aluminum Casing: 15
+Extra Computer: 5/6
+Extra Heavy Modular Frame: 2 3/8
+Extra Smart Plating: 1
+Extra High-Speed Connector: 1 7/8
+Extra Automated Wiring: 2 1/2
+Extra Stator: 1
+Extra AI Limiter: 4 5/8
+Extra Quickwire: 30
+Extra Modular Engine: 3/4
+Extra Electromagnetic Control Rod: 2 5/16
+~~~ LAYER 0 ~~~
+765 Caterium Ore: {} --> 0 --> {3}
+1020 Crude Oil: {} --> 0 --> {1}
+1402 1/2 Water: {} --> 0 --> {1, 2}
+1940 Iron Ore: {} --> 0 --> {1, 3}
+900 Bauxite: {} --> 0 --> {1}
+1957 1/2 Raw Quartz: {} --> 0 --> {1}
+540 Limestone: {} --> 0 --> {2}
+352 1/2 Nitrogen Gas: {} --> 0 --> {8, 9}
+860 Copper Ore: {} --> 0 --> {1}
+~~~ LAYER 1 ~~~
+18 Quartz Crystal: {0} --> 1 --> {6}
+4 1/2 Alternate: Sloppy Alumina: {0} --> 1 --> {3}
+57 Silica: {0} --> 1 --> {2, 3, 4, 5}
+34 Rubber: {0} --> 1 --> {2, 3, 5, 6, 9}
+1 Alternate: Iron Alloy Ingot: {0} --> 1 --> {4}
+17 Alternate: Copper Alloy Ingot: {0} --> 1 --> {2, 4}
+~~~ LAYER 2 ~~~
+14 Petroleum Coke: {1} --> 2 --> {3}
+17 Alternate: Steamed Copper Sheet: {0, 1} --> 2 --> {3, 7}
+9 Alternate: Fine Concrete: {0, 1} --> 2 --> {5, 7}
+4 Copper Powder: {1} --> 2 --> {10}
+1 1/5 Alternate: Diluted Fuel: {0, 1} --> 2 --> {3}
+~~~ LAYER 3 ~~~
+14 Alternate: Coke Steel Ingot: {0, 2} --> 3 --> {4}
+17 Alternate: Tempered Caterium Ingot: {0, 2} --> 3 --> {4}
+11 Alternate: Silicon Circuit Board: {1, 2} --> 3 --> {5, 7, 8}
+4 Alternate: Recycled Plastic: {1, 2} --> 3 --> {4, 5, 8}
+6 Alternate: Electrode Aluminum Scrap: {1, 2} --> 3 --> {4}
+~~~ LAYER 4 ~~~
+20 Aluminum Ingot: {1, 3} --> 4 --> {5}
+44 Steel Pipe: {3} --> 4 --> {5, 6, 7}
+30 Quickwire: {3} --> 4 --> {5}
+6 Alternate: Fused Wire: {1, 3} --> 4 --> {6}
+2 Alternate: Coated Iron Plate: {1, 3} --> 4 --> {5}
+~~~ LAYER 5 ~~~
+5 Alternate: Aluminum Beam: {4} --> 5 --> {6, 7}
+8 Alternate: Quickwire Stator: {4} --> 5 --> {6, 8}
+5 Alternate: Silicon High-Speed Connector: {1, 3, 4} --> 5 --> {6}
+7 Alternate: Plastic AI Limiter: {3, 4} --> 5 --> {6}
+12 Aluminum Casing: {4} --> 5 --> {6, 8}
+15 Alternate: Encased Industrial Pipe: {2, 4} --> 5 --> {7}
+12 Alternate: Adhered Iron Plate: {1, 4} --> 5 --> {6, 8}
+~~~ LAYER 6 ~~~
+3 Alternate: Steel Screw: {5} --> 6 --> {7}
+3 Electromagnetic Control Rod: {5} --> 6 --> {8, 9}
+7 Alternate: Automated Speed Wiring: {4, 5} --> 6 --> {8}
+21 Alternate: Insulated Crystal Oscillator: {1, 5} --> 6 --> {7, 8}
+18 Alternate: Steeled Frame: {4, 5} --> 6 --> {7}
+4 Alternate: Heat Exchanger: {1, 5} --> 6 --> {9}
+~~~ LAYER 7 ~~~
+13 Alternate: Crystal Computer: {3, 6} --> 7 --> {8}
+3 Versatile Framework: {5, 6} --> 7 --> {8}
+6 Alternate: Heavy Encased Frame: {2, 4, 5, 6} --> 7 --> {8}
+3 Alternate: Copper Rotor: {2, 6} --> 7 --> {8, 9}
+~~~ LAYER 8 ~~~
+3 Alternate: Plastic Smart Plating: {3, 5, 7} --> 8 --> {9}
+5 Alternate: Rigor Motor: {5, 6, 7} --> 8 --> {9}
+10 Adaptive Control Unit: {3, 6, 7} --> 8 --> {11}
+3 Fused Modular Frame: {0, 5, 7} --> 8 --> {9, 10}
+5 Magnetic Field Generator: {6, 7} --> 8 --> {12}
+9 Radio Control Unit: {5, 6, 7} --> 8 --> {9, 10}
+~~~ LAYER 9 ~~~
+1 Pressure Conversion Cube: {8} --> 9 --> {10}
+7 Modular Engine: {1, 8} --> 9 --> {10}
+1 Alternate: Turbo Electric Motor: {6, 7, 8} --> 9 --> {10}
+4 Alternate: Cooling Device: {0, 6, 8} --> 9 --> {10}
+~~~ LAYER 10 ~~~
+2 Nuclear Pasta: {2, 9} --> 10 --> {12}
+2 1/2 Thermal Propulsion Rocket: {8, 9} --> 10 --> {12}
+2 Alternate: OC Supercomputer: {8, 9} --> 10 --> {11}
+~~~ LAYER 11 ~~~
+6 2/3 Assembly Director System: {8, 10} --> 11 --> {12}
+~~~ LAYER 12 ~~~
+0 output: {8, 10, 11} --> 12 --> {}
+flowchart TD
+  subgraph L0
+    54[765 Caterium Ore]
+    60[1020 Crude Oil]
+    53[1402 1/2 Water]
+    57[1940 Iron Ore]
+    58[900 Bauxite]
+    55[1957 1/2 Raw Quartz]
+    59[540 Limestone]
+    56[352 1/2 Nitrogen Gas]
+    61[860 Copper Ore]
+  end
+  subgraph L1
+    23[18 Quartz Crystal]
+    40[4 1/2 Alternate: Sloppy Alumina]
+    49[57 Silica]
+    8[34 Rubber]
+    44[1 Alternate: Iron Alloy Ingot]
+    24[17 Alternate: Copper Alloy Ingot]
+  end
+  subgraph L2
+    17[14 Petroleum Coke]
+    18[17 Alternate: Steamed Copper Sheet]
+    7[9 Alternate: Fine Concrete]
+    9[4 Copper Powder]
+    27[1 1/5 Alternate: Diluted Fuel]
+  end
+  subgraph L3
+    19[14 Alternate: Coke Steel Ingot]
+    45[17 Alternate: Tempered Caterium Ingot]
+    10[11 Alternate: Silicon Circuit Board]
+    47[4 Alternate: Recycled Plastic]
+    34[6 Alternate: Electrode Aluminum Scrap]
+  end
+  subgraph L4
+    12[20 Aluminum Ingot]
+    28[44 Steel Pipe]
+    38[30 Quickwire]
+    41[6 Alternate: Fused Wire]
+    22[2 Alternate: Coated Iron Plate]
+  end
+  subgraph L5
+    43[5 Alternate: Aluminum Beam]
+    4[8 Alternate: Quickwire Stator]
+    50[5 Alternate: Silicon High-Speed Connector]
+    6[7 Alternate: Plastic AI Limiter]
+    39[12 Aluminum Casing]
+    20[15 Alternate: Encased Industrial Pipe]
+    1[12 Alternate: Adhered Iron Plate]
+  end
+  subgraph L6
+    35[3 Alternate: Steel Screw]
+    42[3 Electromagnetic Control Rod]
+    11[7 Alternate: Automated Speed Wiring]
+    2[21 Alternate: Insulated Crystal Oscillator]
+    37[18 Alternate: Steeled Frame]
+    26[4 Alternate: Heat Exchanger]
+  end
+  subgraph L7
+    31[13 Alternate: Crystal Computer]
+    52[3 Versatile Framework]
+    13[6 Alternate: Heavy Encased Frame]
+    32[3 Alternate: Copper Rotor]
+  end
+  subgraph L8
+    36[3 Alternate: Plastic Smart Plating]
+    16[5 Alternate: Rigor Motor]
+    3[10 Adaptive Control Unit]
+    25[3 Fused Modular Frame]
+    5[5 Magnetic Field Generator]
+    48[9 Radio Control Unit]
+  end
+  subgraph L9
+    21[1 Pressure Conversion Cube]
+    30[7 Modular Engine]
+    51[1 Alternate: Turbo Electric Motor]
+    15[4 Alternate: Cooling Device]
+  end
+  subgraph L10
+    46[2 Nuclear Pasta]
+    14[2 1/2 Thermal Propulsion Rocket]
+    33[2 Alternate: OC Supercomputer]
+  end
+  subgraph L11
+    29[6 2/3 Assembly Director System]
+  end
+  subgraph L12
+    0[output]
+  end
+  subgraph Extras
+    Desc_Water_C[630 Water]
+    Desc_Cement_C[26 1/4 Concrete]
+    Desc_Silica_C[12 1/2 Silica]
+    Desc_IronPlate_C[15 Iron Plate]
+    Desc_SteelPlate_C[7 1/2 Steel Beam]
+    Desc_AluminumIngot_C[7 1/2 Aluminum Ingot]
+    Desc_PetroleumCoke_C[15 Petroleum Coke]
+    Desc_Wire_C[15 Wire]
+    Desc_IronPlateReinforced_C[1 1/2 Reinforced Iron Plate]
+    Desc_Rotor_C[15/16 Rotor]
+    Desc_CopperSheet_C[12 1/2 Copper Sheet]
+    Desc_ModularFrame_C[1 1/2 Modular Frame]
+    Desc_IronScrew_C[195 Screw]
+    Desc_CrystalOscillator_C[5/24 Crystal Oscillator]
+    Desc_Motor_C[6 15/16 Motor]
+    Desc_ComputerSuper_C[1 Supercomputer]
+    Desc_CoolingSystem_C[1/2 Cooling System]
+    Desc_MotorLightweight_C[5/16 Turbo Motor]
+    Desc_SteelPipe_C[9 1/2 Steel Pipe]
+    Desc_ModularFrameFused_C[1 Fused Modular Frame]
+    Desc_ModularFrameLightweight_C[1/16 Radio Control Unit]
+    Desc_GoldIngot_C[4 1/2 Caterium Ingot]
+    Desc_CircuitBoard_C[7 1/2 Circuit Board]
+    Desc_Plastic_C[6 1/2 Plastic]
+    Desc_SteelPlateReinforced_C[3 3/4 Encased Industrial Beam]
+    Desc_Rubber_C[14 3/8 Rubber]
+    Desc_HeavyOilResidue_C[60 Heavy Oil Residue]
+    Desc_QuartzCrystal_C[11 1/4 Quartz Crystal]
+    Desc_SteelIngot_C[80 Steel Ingot]
+    Desc_SpaceElevatorPart_2_C[2 1/2 Versatile Framework]
+    Desc_CopperIngot_C[45 1/2 Copper Ingot]
+    Desc_AluminumCasing_C[15 Aluminum Casing]
+    Desc_Computer_C[5/6 Computer]
+    Desc_ModularFrameHeavy_C[2 3/8 Heavy Modular Frame]
+    Desc_SpaceElevatorPart_1_C[1 Smart Plating]
+    Desc_HighSpeedConnector_C[1 7/8 High-Speed Connector]
+    Desc_SpaceElevatorPart_3_C[2 1/2 Automated Wiring]
+    Desc_Stator_C[1 Stator]
+    Desc_CircuitBoardHighSpeed_C[4 5/8 AI Limiter]
+    Desc_HighSpeedWire_C[30 Quickwire]
+    Desc_SpaceElevatorPart_4_C[3/4 Modular Engine]
+    Desc_ElectromagneticControlRod_C[2 5/16 Electromagnetic Control Rod]
+  end
+  14 -->|2 1/2 Thermal Propulsion Rocket| 0
+  29 -->|5 Assembly Director System| 0
+  5 -->|5 Magnetic Field Generator| 0
+  46 -->|1 Nuclear Pasta| 0
+  24 -->|72 Copper Ingot| 41
+  45 -->|18 Caterium Ingot| 41
+  22 -->|135 Iron Plate| 1
+  8 -->|45 Rubber| 1
+  18 -->|67 1/2 Copper Sheet| 32
+  35 -->|585 Screw| 32
+  49 -->|135 Silica| 7
+  24 -->|1200 Copper Ingot| 9
+  43 -->|15 Steel Beam| 35
+  8 -->|120 Rubber| 47
+  27 -->|120 Fuel| 47
+  4 -->|18 Stator| 42
+  6 -->|12 AI Limiter| 42
+  24 -->|382 1/2 Copper Ingot| 18
+  19 -->|1320 Steel Ingot| 28
+  44 -->|75 Iron Ingot| 22
+  47 -->|15 Plastic| 22
+  8 -->|560 Heavy Oil Residue| 17
+  39 -->|120 Aluminum Casing| 26
+  8 -->|120 Rubber| 26
+  28 -->|128 Steel Pipe| 4
+  38 -->|480 Quickwire| 4
+  8 -->|60 Heavy Oil Residue| 27
+  48 -->|12 Radio Control Unit| 33
+  15 -->|12 Cooling System| 33
+  1 -->|7 1/2 Reinforced Iron Plate| 36
+  32 -->|7 1/2 Rotor| 36
+  47 -->|22 1/2 Plastic| 36
+  1 -->|36 Reinforced Iron Plate| 37
+  28 -->|180 Steel Pipe| 37
+  12 -->|1080 Aluminum Ingot| 39
+  16 -->|6 9/16 Motor| 51
+  48 -->|8 7/16 Radio Control Unit| 51
+  42 -->|4 11/16 Electromagnetic Control Rod| 51
+  32 -->|6 9/16 Rotor| 51
+  18 -->|302 1/2 Copper Sheet| 10
+  49 -->|302 1/2 Silica| 10
+  39 -->|360 Aluminum Casing| 48
+  2 -->|11 1/4 Crystal Oscillator| 48
+  31 -->|22 1/2 Computer| 48
+  37 -->|7 1/2 Modular Frame| 52
+  43 -->|90 Steel Beam| 52
+  28 -->|360 Steel Pipe| 20
+  7 -->|300 Concrete| 20
+  16 -->|14 Motor| 30
+  8 -->|105 Rubber| 30
+  36 -->|14 Smart Plating| 30
+  40 -->|1080 Alumina Solution| 34
+  17 -->|360 Petroleum Coke| 34
+  38 -->|450 Quickwire| 50
+  49 -->|187 1/2 Silica| 50
+  10 -->|15 Circuit Board| 50
+  34 -->|1800 Aluminum Scrap| 12
+  49 -->|1500 Silica| 12
+  30 -->|6 1/4 Modular Engine| 14
+  51 -->|2 1/2 Turbo Motor| 14
+  15 -->|7 1/2 Cooling System| 14
+  25 -->|2 1/2 Fused Modular Frame| 14
+  9 -->|200 Copper Powder| 46
+  21 -->|1 Pressure Conversion Cube| 46
+  17 -->|255 Petroleum Coke| 45
+  4 -->|26 1/4 Stator| 11
+  41 -->|525 Wire| 11
+  50 -->|13 1/8 High-Speed Connector| 11
+  38 -->|840 Quickwire| 6
+  47 -->|196 Plastic| 6
+  52 -->|12 1/2 Versatile Framework| 5
+  42 -->|5 Electromagnetic Control Rod| 5
+  13 -->|4 1/2 Heavy Modular Frame| 25
+  39 -->|225 Aluminum Casing| 25
+  12 -->|112 1/2 Aluminum Ingot| 43
+  10 -->|65 Circuit Board| 31
+  2 -->|21 2/3 Crystal Oscillator| 31
+  3 -->|10 Adaptive Control Unit| 29
+  33 -->|5 Supercomputer| 29
+  25 -->|1 Fused Modular Frame| 21
+  48 -->|2 Radio Control Unit| 21
+  45 -->|360 Caterium Ingot| 38
+  26 -->|40 Heat Sink| 15
+  16 -->|10 Motor| 15
+  11 -->|50 Automated Wiring| 3
+  10 -->|50 Circuit Board| 3
+  13 -->|10 Heavy Modular Frame| 3
+  31 -->|20 Computer| 3
+  23 -->|393 3/4 Quartz Crystal| 2
+  8 -->|275 5/8 Rubber| 2
+  6 -->|39 3/8 AI Limiter| 2
+  37 -->|45 Modular Frame| 13
+  20 -->|56 1/4 Encased Industrial Beam| 13
+  28 -->|202 1/2 Steel Pipe| 13
+  7 -->|123 3/4 Concrete| 13
+  17 -->|1050 Petroleum Coke| 19
+  32 -->|18 3/4 Rotor| 16
+  4 -->|18 3/4 Stator| 16
+  2 -->|6 1/4 Crystal Oscillator| 16
+  53 -->|382 1/2 Water| 18
+  53 -->|120 Water| 27
+  53 -->|900 Water| 40
+  54 -->|765 Caterium Ore| 45
+  55 -->|1282 1/2 Raw Quartz| 49
+  55 -->|675 Raw Quartz| 23
+  56 -->|112 1/2 Nitrogen Gas| 25
+  56 -->|240 Nitrogen Gas| 15
+  57 -->|850 Iron Ore| 24
+  57 -->|40 Iron Ore| 44
+  57 -->|1050 Iron Ore| 19
+  58 -->|900 Bauxite| 40
+  59 -->|540 Limestone| 7
+  60 -->|1020 Crude Oil| 8
+  61 -->|850 Copper Ore| 24
+  61 -->|10 Copper Ore| 44

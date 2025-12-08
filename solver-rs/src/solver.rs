@@ -285,11 +285,19 @@ impl Model {
     fn require_exclusive_primary_output(&mut self, data: &Data) {
         let mut output_recipes: BTreeMap<_, HashSet<_>> = BTreeMap::new();
         for (recipe_key, recipe) in &data.recipes {
-            let Some(primary_output) = recipe.products.first() else { continue };
-            output_recipes.entry(primary_output.item).or_default().insert(*recipe_key);
+            let Some(primary_output) = recipe.products.first() else {
+                continue;
+            };
+            output_recipes
+                .entry(primary_output.item)
+                .or_default()
+                .insert(*recipe_key);
         }
 
-        for (item, recipes) in output_recipes {
+        for (_, recipes) in output_recipes {
+            if recipes.len() <= 1 {
+                continue;
+            }
             let mut nonzero_vars = vec![];
             for recipe in recipes {
                 let is_nonzero = variable().name(format!("{recipe}_nonzero")).binary();

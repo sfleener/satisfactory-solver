@@ -21,13 +21,13 @@
     "Resources Scaled": 1,
     "Nuclear Waste": 9999999,
 
-//    "Power Use": 0.1,
+    "Power Use": 0.1,
     "Item Use": 0,
-//    "Buildings Scaled": 0,
+    "Buildings Scaled": 0,
 
-    "Power Use": 0.3,
+//    "Power Use": 0.3,
 //    "Item Use": 0.4,
-    "Buildings Scaled": 30,
+//    "Buildings Scaled": 30,
   },
   "recipes_off": [
     "Recipe_Biomass_Mycelia_C",
