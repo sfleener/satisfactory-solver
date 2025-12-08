@@ -158,7 +158,7 @@ impl<Unit> From<f64> for Rat<Unit> {
             return Self(RawRat::new(whole, 1), Boo);
         }
 
-        for i in 1i64..=20 {
+        for i in 1i64..=10000 {
             for j in 1..=i {
                 if is_near(fractional, j as f64 / i as f64) {
                     return Self(RawRat::new((whole * i) + j, i), Boo);

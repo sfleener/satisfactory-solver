@@ -22,11 +22,11 @@
     "Nuclear Waste": 9999999,
 
 //    "Power Use": 0.1,
-//    "Item Use": 0,
+    "Item Use": 0,
 //    "Buildings Scaled": 0,
 
     "Power Use": 0.3,
-    "Item Use": 0.4,
+//    "Item Use": 0.4,
     "Buildings Scaled": 30,
   },
   "recipes_off": [
@@ -64,5 +64,5 @@
   "extras": {},
   "max_item": false,
   "checkbox_Nuclear Waste": false,
-  "integer_recipes": true
+  "integer_recipes": true,
 }
