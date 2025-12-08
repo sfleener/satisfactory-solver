@@ -48,11 +48,17 @@
     "Recipe_Alternate_PureCateriumIngot_C",
     "Recipe_PureAluminumIngot_C"
   ],
+  floating_recipes: [
+    "Recipe_SpaceElevatorPart_6_C",
+    "Recipe_SpaceElevatorPart_7_C",
+    "Recipe_SpaceElevatorPart_8_C",
+    "Recipe_SpaceElevatorPart_9_C",
+  ],
   "inputs": {},
   "outputs": {
     "Desc_SpaceElevatorPart_6_C": 5,
-    "Desc_SpaceElevatorPart_7_C": 4.5,
-    "Desc_SpaceElevatorPart_8_C": 3,
+    "Desc_SpaceElevatorPart_7_C": 5,
+    "Desc_SpaceElevatorPart_8_C": 2.5,
     "Desc_SpaceElevatorPart_9_C": 1,
   },
   "extras": {},

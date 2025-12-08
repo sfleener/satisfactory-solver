@@ -83,6 +83,7 @@ pub struct Settings {
     pub resource_limits: HashMap<ItemKey, ItemsPerMinute>,
     pub weights: Weights,
     pub recipes_off: HashSet<RecipeKey>,
+    pub floating_recipes: HashSet<RecipeKey>,
     pub inputs: HashMap<ItemKey, ItemsPerMinute>,
     pub outputs: HashMap<ItemKey, ItemsPerMinute>,
     pub extras: HashMap<ItemKey, ItemsPerMinute>,

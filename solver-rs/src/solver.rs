@@ -134,16 +134,24 @@ impl Model {
             }
         });
 
+        let (variable_recipes, integer): (Vec<_>, Vec<_>) = solid
+            .into_iter()
+            .partition(|key| settings.floating_recipes.contains(key));
+
         let solid_recipes = problem.add_vector(
             if settings.integer_recipes {
                 variable().name("recipes").min(0).integer()
             } else {
                 variable().name("recipes").min(0)
             },
-            solid.len(),
+            integer.len(),
         );
         let fluid_recipes =
             problem.add_vector(variable().name("fluid_recipes").min(0), fluid.iter().len());
+        let variable_recipe_vars = problem.add_vector(
+            variable().name("variable_recipes").min(0),
+            variable_recipes.len(),
+        );
         let power_use = problem.add(variable().name("power_use").min(0));
         let item_use = problem.add(variable().name("item_use").min(0));
         let building_use = problem.add(variable().name("building_use").min(0));
@@ -157,11 +165,17 @@ impl Model {
             inputs: all_items.iter().copied().zip_eq(inputs).collect(),
             outputs: all_items.iter().copied().zip_eq(outputs).collect(),
             items: all_items.iter().copied().zip_eq(items).collect(),
-            recipes: solid
+            recipes: integer
                 .iter()
                 .copied()
                 .zip_eq(solid_recipes)
                 .chain(fluid.iter().copied().zip_eq(fluid_recipes))
+                .chain(
+                    variable_recipes
+                        .iter()
+                        .copied()
+                        .zip_eq(variable_recipe_vars),
+                )
                 .collect(),
             power_use,
             item_use,
