@@ -12,6 +12,7 @@ cbc = ["good_lp/coin_cbc"]
 eyre = "0.6"
 good_lp = { version = "1", default-features = false }
 itertools = "0.14"
+json5 = "1"
 lasso = "0.7"
 num = "0.4"
 petgraph = "0.8"

@@ -80,6 +80,10 @@ impl<Unit> Rat<Unit> {
     pub const ZERO: Self = Self(RawRat::ZERO, Boo);
     pub const ONE: Self = Self(RawRat::ONE, Boo);
 
+    pub const fn new_unchecked(numer: i64, denom: i64) -> Self {
+        Self(RawRat::new_raw(numer, denom), Boo)
+    }
+
     pub fn new(numer: i64, denom: i64) -> Self {
         Self(RawRat::new(numer, denom), Boo)
     }

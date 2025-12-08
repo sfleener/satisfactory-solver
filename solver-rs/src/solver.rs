@@ -4,12 +4,13 @@ use crate::rational::{ItemsPerMinute, Rat};
 use eyre::bail;
 use good_lp::{
     Constraint, Expression, ProblemVariables, Solution, SolutionStatus, SolverModel, Variable,
-    constraint, variable,
+    WithTimeLimit, constraint, variable,
 };
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::iter::Sum;
+use std::time::Duration;
 
 #[cfg(feature = "scip")]
 type PreparedProblem = good_lp::solvers::scip::SCIPProblem;
@@ -436,6 +437,7 @@ impl Model {
         };
         let problem = problem
             .using(|c| SOLVER_FN(c))
+            // .with_time_limit(Duration::from_secs(300).as_secs_f64())
             .with_all(self.constraints.clone());
         let variables = Variables {
             inputs: self.inputs,
@@ -505,12 +507,14 @@ impl PreparedModel {
     pub fn solve(self) -> eyre::Result<SolvedProblem> {
         let result = self.problem.solve()?;
         match result.status() {
-            SolutionStatus::Optimal => {}
+            SolutionStatus::Optimal => {
+                println!("Found optimial solution");
+            }
             SolutionStatus::TimeLimit => {
-                bail!("Solution hit time limit");
+                println!("Solution hit time limit");
             }
             SolutionStatus::GapLimit => {
-                bail!("Solution hit gap limit");
+                println!("Solution hit gap limit");
             }
         }
         Ok(SolvedProblem {

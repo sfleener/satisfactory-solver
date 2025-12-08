@@ -1,5 +1,5 @@
 {
-  "phase": 5,
+  "phase": 4,
   "resource_limits": {
     "Desc_Water_C": 99999999,
     "Desc_OreGold_C": 15000,
@@ -16,13 +16,18 @@
     "Desc_SAM_C": 10200
   },
   "weights": {
-    "Power Use": 0.1,
-    "Item Use": 0,
     "Building Use": 0,
     "Resource Use": 0,
-    "Buildings Scaled": 0,
     "Resources Scaled": 1,
-    "Nuclear Waste": 9999999
+    "Nuclear Waste": 9999999,
+
+//    "Power Use": 0.1,
+//    "Item Use": 0,
+//    "Buildings Scaled": 0,
+
+    "Power Use": 0.3,
+    "Item Use": 0.4,
+    "Buildings Scaled": 30,
   },
   "recipes_off": [
     "Recipe_Biomass_Mycelia_C",
@@ -35,10 +40,21 @@
     "Build_GeneratorBiomass_Automated_C_Desc_Mycelia_C",
     "Build_GeneratorBiomass_Automated_C_Desc_GenericBiomass_C",
     "Build_GeneratorBiomass_Automated_C_Desc_Biofuel_C",
-    "Build_GeneratorBiomass_Automated_C_Desc_PackagedBiofuel_C"
+    "Build_GeneratorBiomass_Automated_C_Desc_PackagedBiofuel_C",
+
+    "Recipe_Alternate_PureQuartzCrystal_C",
+    "Recipe_Alternate_PureIronIngot_C",
+    "Recipe_Alternate_PureCopperIngot_C",
+    "Recipe_Alternate_PureCateriumIngot_C",
+    "Recipe_PureAluminumIngot_C"
   ],
   "inputs": {},
-  "outputs": {},
+  "outputs": {
+    "Desc_SpaceElevatorPart_6_C": 5,
+    "Desc_SpaceElevatorPart_7_C": 4.5,
+    "Desc_SpaceElevatorPart_8_C": 3,
+    "Desc_SpaceElevatorPart_9_C": 1,
+  },
   "extras": {},
   "max_item": false,
   "checkbox_Nuclear Waste": false,
