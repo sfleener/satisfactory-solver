@@ -1,16 +1,14 @@
 use crate::data::{Data, Form, ItemKey, MachineKey, RecipeKey, Settings};
 use crate::rational::units::{Megawatts, Points, Recipes, Unitless};
 use crate::rational::{ItemsPerMinute, Rat};
-use eyre::bail;
 use good_lp::{
     Constraint, Expression, ProblemVariables, Solution, SolutionStatus, SolverModel, Variable,
-    WithTimeLimit, constraint, variable,
+    constraint, variable,
 };
 use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::iter::Sum;
-use std::time::Duration;
 
 #[cfg(feature = "scip")]
 type PreparedProblem = good_lp::solvers::scip::SCIPProblem;
@@ -25,6 +23,8 @@ type PreparedProblem = good_lp::solvers::coin_cbc::CoinCbcProblem;
 #[cfg(all(feature = "cbc", not(feature = "scip")))]
 static SOLVER_FN: fn(variable::UnsolvedProblem) -> PreparedProblem =
     good_lp::solvers::coin_cbc::coin_cbc;
+
+const MAX_SINGLE_RECIPE: i32 = 1000;
 
 struct Keys {
     resources: BTreeSet<ItemKey>,
@@ -140,16 +140,28 @@ impl Model {
 
         let solid_recipes = problem.add_vector(
             if settings.integer_recipes {
-                variable().name("recipes").min(0).integer()
+                variable()
+                    .name("recipes")
+                    .min(0)
+                    .max(MAX_SINGLE_RECIPE)
+                    .integer()
             } else {
-                variable().name("recipes").min(0)
+                variable().name("recipes").min(0).max(MAX_SINGLE_RECIPE)
             },
             integer.len(),
         );
-        let fluid_recipes =
-            problem.add_vector(variable().name("fluid_recipes").min(0), fluid.iter().len());
+        let fluid_recipes = problem.add_vector(
+            variable()
+                .name("fluid_recipes")
+                .min(0)
+                .max(MAX_SINGLE_RECIPE),
+            fluid.iter().len(),
+        );
         let variable_recipe_vars = problem.add_vector(
-            variable().name("variable_recipes").min(0),
+            variable()
+                .name("variable_recipes")
+                .min(0)
+                .max(MAX_SINGLE_RECIPE),
             variable_recipes.len(),
         );
         let power_use = problem.add(variable().name("power_use").min(0));
@@ -304,7 +316,7 @@ impl Model {
                 let is_nonzero = self.problem.add(is_nonzero);
 
                 let recipe_var = self.recipes[&recipe];
-                self.constrain(constraint!(recipe_var / 1000 <= is_nonzero));
+                self.constrain(constraint!(recipe_var / MAX_SINGLE_RECIPE <= is_nonzero));
                 nonzero_vars.push(is_nonzero);
             }
             let sum = Expression::sum(nonzero_vars.into_iter());
