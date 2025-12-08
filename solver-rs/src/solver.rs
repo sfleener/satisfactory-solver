@@ -7,7 +7,7 @@ use good_lp::{
     WithTimeLimit, constraint, variable,
 };
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::time::Duration;
@@ -282,6 +282,28 @@ impl Model {
         }
     }
 
+    fn require_exclusive_primary_output(&mut self, data: &Data) {
+        let mut output_recipes: BTreeMap<_, HashSet<_>> = BTreeMap::new();
+        for (recipe_key, recipe) in &data.recipes {
+            let Some(primary_output) = recipe.products.first() else { continue };
+            output_recipes.entry(primary_output.item).or_default().insert(*recipe_key);
+        }
+
+        for (item, recipes) in output_recipes {
+            let mut nonzero_vars = vec![];
+            for recipe in recipes {
+                let is_nonzero = variable().name(format!("{recipe}_nonzero")).binary();
+                let is_nonzero = self.problem.add(is_nonzero);
+
+                let recipe_var = self.recipes[&recipe];
+                self.constrain(constraint!(recipe_var / 1000 <= is_nonzero));
+                nonzero_vars.push(is_nonzero);
+            }
+            let sum = Expression::sum(nonzero_vars.into_iter());
+            self.constrain(constraint!(sum <= 1));
+        }
+    }
+
     fn calculate_power_use(&mut self, data: &Data, recipes: &HashSet<RecipeKey>) {
         let expr = Expression::sum(
             recipes
@@ -489,6 +511,7 @@ impl PreparedModel {
         model.add_product_constraints(&keys.products, data);
         model.add_ingredient_constraints(&keys.all_items, data);
         model.add_resource_constraints(settings);
+        model.require_exclusive_primary_output(data);
 
         let filtered_limits = settings
             .resource_limits
