@@ -7,15 +7,15 @@ use petgraph::Direction;
 use petgraph::dot::Dot;
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::visit::{EdgeRef, IntoEdgesDirected};
-use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{Debug, Formatter};
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     let mut graph = DiGraph::<(Rat<Recipes>, String), (ItemKey, ItemsPerMinute)>::new();
     let output = graph.add_node((Rat::ZERO, "output".to_string()));
-    let mut recipe_nodes = HashMap::new();
-    let mut resource_nodes = HashMap::new();
-    let mut input_nodes = HashMap::new();
+    let mut recipe_nodes = BTreeMap::new();
+    let mut resource_nodes = BTreeMap::new();
+    let mut input_nodes = BTreeMap::new();
 
     for (recipe_key, &(_, recipe_val)) in &values.recipes_used {
         let recipe = &data.recipes[recipe_key];
@@ -197,7 +197,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
     }
 
-    let mut ranks: HashMap<NodeIndex, u16> = HashMap::new();
+    let mut ranks: BTreeMap<NodeIndex, u16> = BTreeMap::new();
     let components = petgraph::algo::tarjan_scc(&graph);
 
     for nodes in components.iter().rev() {
@@ -265,7 +265,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
 struct DotGraphFmt<'a> {
     graph: &'a DiGraph<(Rat<Recipes>, String), (ItemKey, ItemsPerMinute)>,
-    ranks: &'a HashMap<NodeIndex, u16>,
+    ranks: &'a BTreeMap<NodeIndex, u16>,
     data: &'a Data,
     extra_inputs: &'a BTreeMap<ItemKey, (NodeIndex, ItemsPerMinute)>,
     extras: &'a BTreeMap<ItemKey, BTreeMap<RecipeKey, (ItemsPerMinutePerRecipe, ItemsPerMinute)>>,

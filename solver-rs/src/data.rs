@@ -3,7 +3,7 @@ use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use lasso::Spur;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -80,13 +80,13 @@ impl<T> From<&str> for Key<T> {
 #[serde(deny_unknown_fields)]
 pub struct Settings {
     pub phase: Option<u8>,
-    pub resource_limits: HashMap<ItemKey, ItemsPerMinute>,
+    pub resource_limits: BTreeMap<ItemKey, ItemsPerMinute>,
     pub weights: Weights,
-    pub recipes_off: HashSet<RecipeKey>,
-    pub floating_recipes: HashSet<RecipeKey>,
-    pub inputs: HashMap<ItemKey, ItemsPerMinute>,
-    pub outputs: HashMap<ItemKey, ItemsPerMinute>,
-    pub extras: HashMap<ItemKey, ItemsPerMinute>,
+    pub recipes_off: BTreeSet<RecipeKey>,
+    pub floating_recipes: BTreeSet<RecipeKey>,
+    pub inputs: BTreeMap<ItemKey, ItemsPerMinute>,
+    pub outputs: BTreeMap<ItemKey, ItemsPerMinute>,
+    pub extras: BTreeMap<ItemKey, ItemsPerMinute>,
     pub max_item: Option<serde_json::Value>,
     #[serde(rename = "checkbox_Nuclear Waste")]
     pub force_nuclear_waste: bool,
@@ -124,10 +124,10 @@ pub struct Weights {
 
 #[derive(Deserialize, Debug)]
 pub struct Data {
-    pub items: HashMap<ItemKey, Arc<Item>>,
-    pub resources: HashMap<ItemKey, Arc<Resource>>,
-    pub recipes: HashMap<RecipeKey, Arc<Recipe>>,
-    pub machines: HashMap<MachineKey, Arc<Machine>>,
+    pub items: BTreeMap<ItemKey, Arc<Item>>,
+    pub resources: BTreeMap<ItemKey, Arc<Resource>>,
+    pub recipes: BTreeMap<RecipeKey, Arc<Recipe>>,
+    pub machines: BTreeMap<MachineKey, Arc<Machine>>,
 }
 
 #[derive(Deserialize, Debug)]

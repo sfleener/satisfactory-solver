@@ -7,7 +7,7 @@ use good_lp::{
     WithTimeLimit, constraint, variable,
 };
 use itertools::Itertools;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::time::Duration;
@@ -27,18 +27,18 @@ static SOLVER_FN: fn(variable::UnsolvedProblem) -> PreparedProblem =
     good_lp::solvers::coin_cbc::coin_cbc;
 
 struct Keys {
-    resources: HashSet<ItemKey>,
-    recipes: HashSet<RecipeKey>,
-    products: HashSet<ItemKey>,
-    ingredients: HashSet<ItemKey>,
-    all_items: HashSet<ItemKey>,
+    resources: BTreeSet<ItemKey>,
+    recipes: BTreeSet<RecipeKey>,
+    products: BTreeSet<ItemKey>,
+    ingredients: BTreeSet<ItemKey>,
+    all_items: BTreeSet<ItemKey>,
 }
 
 fn extract_items(raw_data: &Data) -> Keys {
-    let resources: HashSet<_> = raw_data.resources.keys().copied().collect();
+    let resources: BTreeSet<_> = raw_data.resources.keys().copied().collect();
     let recipes = raw_data.recipes.keys().copied().collect();
-    let mut products = HashSet::default();
-    let mut ingredients = HashSet::default();
+    let mut products = BTreeSet::default();
+    let mut ingredients = BTreeSet::default();
 
     for recipe in raw_data.recipes.values() {
         products.extend(
@@ -59,7 +59,7 @@ fn extract_items(raw_data: &Data) -> Keys {
         );
     }
 
-    let mut all_items = HashSet::new();
+    let mut all_items = BTreeSet::new();
     all_items.extend(resources.iter().copied());
     all_items.extend(ingredients.iter().copied());
     all_items.extend(products.iter().copied());
@@ -74,10 +74,10 @@ fn extract_items(raw_data: &Data) -> Keys {
 }
 
 pub struct Variables {
-    pub inputs: HashMap<ItemKey, Variable>,
-    pub outputs: HashMap<ItemKey, Variable>,
-    pub items: HashMap<ItemKey, Variable>,
-    pub recipes: HashMap<RecipeKey, Variable>,
+    pub inputs: BTreeMap<ItemKey, Variable>,
+    pub outputs: BTreeMap<ItemKey, Variable>,
+    pub items: BTreeMap<ItemKey, Variable>,
+    pub recipes: BTreeMap<RecipeKey, Variable>,
     pub power_use: Variable,
     pub item_use: Variable,
     pub building_use: Variable,
@@ -90,10 +90,10 @@ pub struct Variables {
 pub struct Model {
     problem: ProblemVariables,
     constraints: Vec<Constraint>,
-    pub inputs: HashMap<ItemKey, Variable>,
-    pub outputs: HashMap<ItemKey, Variable>,
-    pub items: HashMap<ItemKey, Variable>,
-    pub recipes: HashMap<RecipeKey, Variable>,
+    pub inputs: BTreeMap<ItemKey, Variable>,
+    pub outputs: BTreeMap<ItemKey, Variable>,
+    pub items: BTreeMap<ItemKey, Variable>,
+    pub recipes: BTreeMap<RecipeKey, Variable>,
     pub power_use: Variable,
     pub item_use: Variable,
     pub building_use: Variable,
@@ -107,8 +107,8 @@ impl Model {
     pub fn define(
         settings: &Settings,
         data: &Data,
-        all_items: &HashSet<ItemKey>,
-        recipe_keys: &HashSet<RecipeKey>,
+        all_items: &BTreeSet<ItemKey>,
+        recipe_keys: &BTreeSet<RecipeKey>,
     ) -> Self {
         let mut problem = ProblemVariables::new();
 
@@ -196,7 +196,7 @@ impl Model {
         self.constraints.push(constraint);
     }
 
-    fn fix_input_amounts(&mut self, settings: &Settings, all_items: &HashSet<ItemKey>) {
+    fn fix_input_amounts(&mut self, settings: &Settings, all_items: &BTreeSet<ItemKey>) {
         for item in all_items {
             let input = settings.inputs.get(item).copied().unwrap_or(Rat::ZERO);
             self.constrain(constraint!(self.inputs[item] == input.as_f64()));
@@ -237,7 +237,7 @@ impl Model {
         }
     }
 
-    fn add_product_constraints(&mut self, products: &HashSet<ItemKey>, data: &Data) {
+    fn add_product_constraints(&mut self, products: &BTreeSet<ItemKey>, data: &Data) {
         for item in products {
             let expr = self.inputs[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(rk, rv)| {
@@ -254,7 +254,7 @@ impl Model {
         }
     }
 
-    fn add_ingredient_constraints(&mut self, ingredients: &HashSet<ItemKey>, data: &Data) {
+    fn add_ingredient_constraints(&mut self, ingredients: &BTreeSet<ItemKey>, data: &Data) {
         for item in ingredients {
             let expr = self.outputs[item]
                 + Expression::sum(data.recipes.iter().flat_map(|(recipe_key, recipe_data)| {
@@ -283,7 +283,7 @@ impl Model {
     }
 
     fn require_exclusive_primary_output(&mut self, data: &Data) {
-        let mut output_recipes: BTreeMap<_, HashSet<_>> = BTreeMap::new();
+        let mut output_recipes: BTreeMap<_, BTreeSet<_>> = BTreeMap::new();
         for (recipe_key, recipe) in &data.recipes {
             let Some(primary_output) = recipe.products.first() else {
                 continue;
@@ -312,7 +312,7 @@ impl Model {
         }
     }
 
-    fn calculate_power_use(&mut self, data: &Data, recipes: &HashSet<RecipeKey>) {
+    fn calculate_power_use(&mut self, data: &Data, recipes: &BTreeSet<RecipeKey>) {
         let expr = Expression::sum(
             recipes
                 .iter()
@@ -326,7 +326,7 @@ impl Model {
         self.constrain(constraint!(expr == self.power_use));
     }
 
-    fn calculate_item_use(&mut self, items: &HashSet<ItemKey>) {
+    fn calculate_item_use(&mut self, items: &BTreeSet<ItemKey>) {
         let excluded = [
             ItemKey::new_static("Power_Produced"),
             ItemKey::new_static("Power_Produced_Other"),
@@ -343,7 +343,7 @@ impl Model {
         self.constrain(constraint!(expr == self.item_use));
     }
 
-    fn calculate_building_use(&mut self, recipes: &HashSet<RecipeKey>) {
+    fn calculate_building_use(&mut self, recipes: &BTreeSet<RecipeKey>) {
         let expr = Expression::sum(recipes.iter().map(|r| self.recipes[r]));
         self.constrain(constraint!(expr == self.building_use));
     }
@@ -353,7 +353,7 @@ impl Model {
         self.constrain(constraint!(expr == self.resource_use));
     }
 
-    fn calculate_buildings_scaled(&mut self, data: &Data, recipes: &HashSet<RecipeKey>) {
+    fn calculate_buildings_scaled(&mut self, data: &Data, recipes: &BTreeSet<RecipeKey>) {
         let expr = Expression::sum(recipes.iter().map(|rk| {
             let recipe = &data.recipes[rk];
             let combined_len = recipe.ingredients.len() + recipe.products.len();
@@ -367,7 +367,7 @@ impl Model {
         self.constrain(constraint!(expr == self.buildings_scaled));
     }
 
-    fn calculate_resources_scaled(&mut self, resource_weights: HashMap<ItemKey, Rat<Unitless>>) {
+    fn calculate_resources_scaled(&mut self, resource_weights: BTreeMap<ItemKey, Rat<Unitless>>) {
         let expr = Expression::sum(
             resource_weights
                 .iter()
@@ -376,7 +376,7 @@ impl Model {
         self.constrain(constraint!(expr == self.resources_scaled));
     }
 
-    fn calculate_sink_points(&mut self, data: &Data, items: &HashSet<ItemKey>) {
+    fn calculate_sink_points(&mut self, data: &Data, items: &BTreeSet<ItemKey>) {
         let expr = Expression::sum(items.iter().filter_map(|ik| {
             data.items
                 .get(ik)
@@ -395,7 +395,7 @@ impl Model {
 
     pub fn disable_locked_recipes(&mut self, settings: &Settings, data: &Data) {
         let Some(phase) = settings.phase else { return };
-        let mut disabled: HashSet<MachineKey> = HashSet::new();
+        let mut disabled: BTreeSet<MachineKey> = BTreeSet::new();
         disabled.insert("Build_Packager_C".into());
         if phase < 5 {
             disabled.insert("Build_Converter_C".into());
@@ -526,7 +526,7 @@ impl PreparedModel {
             .iter()
             .filter(|(k, _)| *k != &"Desc_Water_C".into())
             .map(|(k, v)| (*k, *v))
-            .collect::<HashMap<_, _>>();
+            .collect::<BTreeMap<_, _>>();
         let avg_limit = filtered_limits.values().copied().sum::<ItemsPerMinute>()
             / (Rat::<Unitless>::whole(filtered_limits.len().try_into().unwrap()));
         let resource_weights = keys
@@ -601,7 +601,7 @@ impl SolvedProblem {
             .map(|(k, v)| (*k, (data.items[k].name.clone(), v.into())))
             .collect();
 
-        let mut products_map = HashMap::new();
+        let mut products_map = BTreeMap::new();
         for (item, var) in &self.vars.items {
             let item_val = self.solution.value(*var);
             if item_val <= EPSILON {
@@ -612,7 +612,7 @@ impl SolvedProblem {
                 .items
                 .get(item)
                 .map_or_else(|| data.resources[item].name.clone(), |i| i.name.clone());
-            let products: &mut HashMap<_, _> = products_map.entry(key).or_default();
+            let products: &mut BTreeMap<_, _> = products_map.entry(key).or_default();
             for (recipe, var) in &self.vars.recipes {
                 let recipe_val = self.solution.value(*var);
                 if recipe_val <= EPSILON {
@@ -630,7 +630,7 @@ impl SolvedProblem {
             }
         }
 
-        let mut ingredients_map = HashMap::new();
+        let mut ingredients_map = BTreeMap::new();
         for (recipe, var) in &self.vars.recipes {
             let recipe_val = self.solution.value(*var);
             if recipe_val <= EPSILON {
@@ -638,7 +638,7 @@ impl SolvedProblem {
             }
             let recipe_val = Rat::<Recipes>::from(recipe_val);
 
-            let ingredients: &mut HashMap<_, _> = ingredients_map
+            let ingredients: &mut BTreeMap<_, _> = ingredients_map
                 .entry(data.recipes[recipe].name.clone())
                 .or_default();
             for ingredient in &data.recipes[recipe].ingredients {
@@ -705,12 +705,12 @@ impl SolvedProblem {
 #[derive(Debug)]
 pub struct SolutionValues {
     pub sink_points: Rat<Points>,
-    pub items_input: HashMap<ItemKey, (String, ItemsPerMinute)>,
-    pub items_output: HashMap<ItemKey, (String, ItemsPerMinute)>,
-    pub resources_needed: HashMap<ItemKey, (String, ItemsPerMinute)>,
-    pub items_needed: HashMap<ItemKey, (String, ItemsPerMinute)>,
-    pub recipes_used: HashMap<RecipeKey, (String, Rat<Recipes>)>,
-    pub power_produced: HashMap<ItemKey, Rat<Megawatts>>,
+    pub items_input: BTreeMap<ItemKey, (String, ItemsPerMinute)>,
+    pub items_output: BTreeMap<ItemKey, (String, ItemsPerMinute)>,
+    pub resources_needed: BTreeMap<ItemKey, (String, ItemsPerMinute)>,
+    pub items_needed: BTreeMap<ItemKey, (String, ItemsPerMinute)>,
+    pub recipes_used: BTreeMap<RecipeKey, (String, Rat<Recipes>)>,
+    pub power_produced: BTreeMap<ItemKey, Rat<Megawatts>>,
 
     pub power_use: f64,
     pub item_use: f64,
@@ -719,6 +719,6 @@ pub struct SolutionValues {
     pub buildings_scaled: f64,
     pub resources_scaled: f64,
 
-    pub products_map: HashMap<String, HashMap<String, ItemsPerMinute>>,
-    pub ingredients_map: HashMap<String, HashMap<String, ItemsPerMinute>>,
+    pub products_map: BTreeMap<String, BTreeMap<String, ItemsPerMinute>>,
+    pub ingredients_map: BTreeMap<String, BTreeMap<String, ItemsPerMinute>>,
 }
