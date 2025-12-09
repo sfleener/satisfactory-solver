@@ -2,6 +2,7 @@ use crate::rational::units::{Items, Minute, One, Per, Recipes, Second, Unitless}
 use num::rational::Rational64 as RawRat;
 use num::{FromPrimitive, Zero};
 use serde::{Deserialize, Deserializer};
+use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::iter::Sum;
 use std::marker::PhantomData as Boo;
@@ -73,7 +74,7 @@ pub mod units {
 pub type ItemsPerMinute = Rat<Per<Items, Minute>>;
 pub type ItemsPerMinutePerRecipe = Rat<Per<Per<Items, Minute>, Recipes>>;
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Copy, Clone)]
 pub struct Rat<Unit>(RawRat, Boo<fn() -> Unit>);
 
 impl<Unit> Rat<Unit> {
@@ -96,12 +97,37 @@ impl<Unit> Rat<Unit> {
         self.0.is_zero()
     }
 
+    pub fn is_near_zero(&self) -> bool {
+        let epsilon = Self::new(1, 100);
+        *self <= epsilon
+    }
+
     pub fn reduced(&self) -> Rat<Unit> {
         Rat(self.0.reduced(), Boo)
     }
 
     pub fn as_f64(&self) -> f64 {
         self.into()
+    }
+}
+
+impl<U> PartialEq for Rat<U> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+
+impl<U> Eq for Rat<U> {}
+
+impl<U> PartialOrd for Rat<U> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<U> Ord for Rat<U> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
     }
 }
 
@@ -158,7 +184,7 @@ impl<Unit> From<f64> for Rat<Unit> {
             return Self(RawRat::new(whole, 1), Boo);
         }
 
-        for i in 1i64..=10000 {
+        for i in 1i64..=20 {
             for j in 1..=i {
                 if is_near(fractional, j as f64 / i as f64) {
                     return Self(RawRat::new((whole * i) + j, i), Boo);

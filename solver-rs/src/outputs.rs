@@ -78,9 +78,9 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             continue;
         }
 
-        assert!(!needs_amount.is_zero());
+        assert!(!needs_amount.is_near_zero());
         if let Some((provides_node, provides_amount)) = provides_inputs.get_mut(&needs_key)
-            && !provides_amount.is_zero()
+            && !provides_amount.is_near_zero()
         {
             let edge = if let Some(e) = graph.find_edge(*provides_node, needs_node) {
                 e
@@ -104,7 +104,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
             *edge_amount += difference;
 
-            if needs_amount.is_zero() {
+            if needs_amount.is_near_zero() {
                 continue;
             }
         }
@@ -118,7 +118,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         assert!(!provides.is_empty());
         let mut to_remove = vec![];
         for (provides_key, (_, provides_amount)) in &mut *provides {
-            assert!(!provides_amount.is_zero());
+            assert!(!provides_amount.is_near_zero());
             let (provides_node, _, _) = recipe_nodes.get(provides_key).unwrap();
 
             let edge = if let Some(e) = graph.find_edge(*provides_node, needs_node) {
@@ -143,11 +143,11 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
             *edge_amount += difference;
 
-            if provides_amount.is_zero() {
+            if provides_amount.is_near_zero() {
                 to_remove.push(*provides_key);
             }
 
-            if needs_amount.is_zero() {
+            if needs_amount.is_near_zero() {
                 break;
             }
         }
@@ -157,7 +157,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         if provides.is_empty() {
             provides_recipes.remove(&needs_key);
         }
-        if !needs_amount.is_zero() {
+        if !needs_amount.is_near_zero() {
             needs.push_back((needs_key, (needs_node, needs_amount.reduced())));
         }
     }
@@ -285,7 +285,7 @@ impl Debug for DotGraphFmt<'_> {
 
             for node in nodes {
                 let (count, name) = self.graph.node_weight(node).unwrap();
-                if count.is_zero() {
+                if count.is_near_zero() {
                     writeln!(f, "    {}[{}]", node.index(), name)?;
                 } else {
                     writeln!(f, "    {}[{:?} {}]", node.index(), count, name,)?;
@@ -297,7 +297,7 @@ impl Debug for DotGraphFmt<'_> {
 
         writeln!(f, "  subgraph Extras")?;
         for (k, (_, extra)) in self.extra_inputs {
-            if extra.is_zero() {
+            if extra.is_near_zero() {
                 continue;
             }
             let name = &self
