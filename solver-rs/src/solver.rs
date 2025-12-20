@@ -6,6 +6,7 @@ use good_lp::{
     constraint, variable,
 };
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::iter::Sum;
@@ -714,7 +715,7 @@ impl SolvedProblem {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SolutionValues {
     pub sink_points: Rat<Points>,
     pub items_input: BTreeMap<ItemKey, (String, ItemsPerMinute)>,

@@ -1,7 +1,7 @@
 use crate::rational::units::{Items, Machines, Megawatts, Per, Points, Recipes, Second};
 use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use lasso::Spur;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Display, Formatter};
@@ -25,6 +25,15 @@ pub type MachineKey = Key<MachineKind>;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Key<T>(Spur, PhantomData<fn() -> T>);
+
+impl<T> Serialize for Key<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        INTERNER.with(|i| serializer.serialize_str(i.borrow().resolve(&self.0)))
+    }
+}
 
 impl<'de, T> Deserialize<'de> for Key<T> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -76,7 +85,7 @@ impl<T> From<&str> for Key<T> {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Settings {
     pub phase: Option<u8>,
@@ -103,7 +112,7 @@ impl Settings {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Weights {
     #[serde(rename = "Power Use")]
@@ -122,7 +131,7 @@ pub struct Weights {
     pub nuclear_waste: f64,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Data {
     pub items: BTreeMap<ItemKey, Arc<Item>>,
     pub resources: BTreeMap<ItemKey, Arc<Resource>>,
@@ -130,7 +139,7 @@ pub struct Data {
     pub machines: BTreeMap<MachineKey, Arc<Machine>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Item {
     pub name: String,
@@ -139,7 +148,7 @@ pub struct Item {
     pub points: Rat<Points>,
 }
 
-#[derive(Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub enum Form {
     #[serde(rename = "RF_SOLID")]
@@ -150,7 +159,7 @@ pub enum Form {
     Gas,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Resource {
     pub name: String,
@@ -159,7 +168,7 @@ pub struct Resource {
     pub points: Rat<Points>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct RawRecipe {
     pub name: String,
@@ -170,7 +179,7 @@ struct RawRecipe {
     pub power_use: Rat<Per<Megawatts, Machines>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 struct RawRecipeItem {
     pub item: ItemKey,
@@ -179,11 +188,21 @@ struct RawRecipeItem {
 
 #[derive(Debug)]
 pub struct Recipe {
+    raw: RawRecipe,
     pub name: String,
     pub ingredients: Vec<RecipeItem>,
     pub products: Vec<RecipeItem>,
     pub machine: MachineKey,
     pub power_use: Rat<Per<Megawatts, Machines>>,
+}
+
+impl Serialize for Recipe {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.raw.serialize(serializer)
+    }
 }
 
 impl<'de> Deserialize<'de> for Recipe {
@@ -196,10 +215,10 @@ impl<'de> Deserialize<'de> for Recipe {
         let time = raw.time.recip().to_per_minute().recip();
 
         Ok(Recipe {
-            name: raw.name,
+            name: raw.name.clone(),
             ingredients: raw
                 .ingredients
-                .into_iter()
+                .iter()
                 .map(|i| RecipeItem {
                     item: i.item,
                     amount: i.amount / time,
@@ -207,7 +226,7 @@ impl<'de> Deserialize<'de> for Recipe {
                 .collect(),
             products: raw
                 .products
-                .into_iter()
+                .iter()
                 .map(|i| RecipeItem {
                     item: i.item,
                     amount: i.amount / time,
@@ -215,11 +234,12 @@ impl<'de> Deserialize<'de> for Recipe {
                 .collect(),
             machine: raw.machine,
             power_use: raw.power_use,
+            raw,
         })
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RecipeItem {
     pub item: ItemKey,
     pub amount: ItemsPerMinutePerRecipe,

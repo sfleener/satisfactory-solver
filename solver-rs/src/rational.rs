@@ -1,7 +1,8 @@
 use crate::rational::units::{Items, Minute, One, Per, Recipes, Second, Unitless};
 use num::rational::Rational64 as RawRat;
 use num::{FromPrimitive, Zero};
-use serde::{Deserialize, Deserializer};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::iter::Sum;
@@ -131,12 +132,44 @@ impl<U> Ord for Rat<U> {
     }
 }
 
+impl<Unit> Serialize for Rat<Unit> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{}/{}", self.0.numer(), self.0.denom()))
+    }
+}
+
 impl<'de, Unit> Deserialize<'de> for Rat<Unit> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        Ok(f64::deserialize(deserializer)?.into())
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum RationalKind {
+            Float(f64),
+            Str(String),
+        }
+
+        match RationalKind::deserialize(deserializer)? {
+            RationalKind::Float(f) => Ok(f.into()),
+            RationalKind::Str(s) => {
+                let Some((numer, denom)) = s.split_once('/') else {
+                    return Err(D::Error::custom(format!("Invalid fraction format: {s}")));
+                };
+
+                Ok(Self::new(
+                    numer
+                        .parse()
+                        .map_err(|e| D::Error::custom(format!("{e:?}")))?,
+                    denom
+                        .parse()
+                        .map_err(|e| D::Error::custom(format!("{e:?}")))?,
+                ))
+            }
+        }
     }
 }
 
