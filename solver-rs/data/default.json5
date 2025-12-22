@@ -1,5 +1,5 @@
 {
-  "phase": 4,
+  "phase": 5,
   "resource_limits": {
     "Desc_Water_C": 99999999,
     "Desc_OreGold_C": 15000,
@@ -53,13 +53,21 @@
     "Recipe_SpaceElevatorPart_7_C",
     "Recipe_SpaceElevatorPart_8_C",
     "Recipe_SpaceElevatorPart_9_C",
+    "Recipe_SpaceElevatorPart_10_C",
+    "Recipe_SpaceElevatorPart_11_C",
+    "Recipe_SpaceElevatorPart_12_C",
   ],
   "inputs": {},
   "outputs": {
-    "Desc_SpaceElevatorPart_6_C": 5,
-    "Desc_SpaceElevatorPart_7_C": 5,
-    "Desc_SpaceElevatorPart_8_C": 2.5,
-    "Desc_SpaceElevatorPart_9_C": 1,
+//    "Desc_SpaceElevatorPart_6_C": 5,
+//    "Desc_SpaceElevatorPart_7_C": 5,
+//    "Desc_SpaceElevatorPart_8_C": 2.5,
+//    "Desc_SpaceElevatorPart_9_C": 1,
+
+    "Desc_SpaceElevatorPart_9_C": 10,
+    "Desc_SpaceElevatorPart_10_C": 10,
+    "Desc_SpaceElevatorPart_11_C": 2.5,
+    "Desc_SpaceElevatorPart_12_C": 2,
   },
   "extras": {},
   "max_item": false,
