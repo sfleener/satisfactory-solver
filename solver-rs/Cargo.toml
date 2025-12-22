@@ -11,6 +11,7 @@ cbc = ["good_lp/coin_cbc"]
 [dependencies]
 assertables = "9"
 clap = { version = "4", features = ["derive"] }
+derive_more = { version = "2", features = ["display"] }
 eyre = "0.6"
 good_lp = { version = "1", default-features = false }
 itertools = "0.14"

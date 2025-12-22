@@ -31,7 +31,11 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     }
 
     let mut needs = VecDeque::new();
-    for (k, v) in &settings.outputs {
+    for (k, mut v) in &settings.outputs {
+        if v.is_near_zero() {
+            let (_, a) = &values.items_output[k];
+            v = a;
+        }
         needs.push_back((*k, (output_node, *v)));
     }
 
@@ -79,7 +83,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             continue;
         }
 
-        assert!(!needs_amount.is_near_zero());
+        assert!(!needs_amount.is_near_zero(), "Non-zero needs remaining: {needs_amount:?}");
         if let Some((provides_node, provides_amount)) = provides_inputs.get_mut(&needs_key)
             && !provides_amount.is_near_zero()
         {
@@ -192,7 +196,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     for (needs_key, needs) in needs_resources {
         for (needs_node, needs_amount) in needs {
             println!(
-                "Needed resource {:?}: {:?} {:?}",
+                "Needed resource {:?}: {} {:?}",
                 needs_key,
                 needs_amount,
                 graph.node_weight(needs_node)
@@ -310,7 +314,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 .map(|edge| *ranks.get(&edge.target()).unwrap())
                 .collect::<BTreeSet<_>>();
             println!(
-                "{:?} {}: {:?} --> {} --> {:?}",
+                "{} {}: {:?} --> {} --> {:?}",
                 amount, name, incoming, rank, outgoing
             );
         }

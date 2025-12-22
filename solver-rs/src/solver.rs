@@ -221,7 +221,14 @@ impl Model {
             return;
         }
 
+        let max_item = settings.max_item.as_ref().and_then(|i| i.as_str().map(|i| ItemKey::from(i)));
+
         for (item, &amount) in &settings.outputs {
+            if max_item.as_ref().is_some_and(|i| i == item) {
+                println!("Maximising {item}");
+                continue;
+            }
+
             if let Some(&x) = self.outputs.get(item) {
                 self.constrain(constraint!(x == amount.as_f64()));
             } else {
@@ -474,13 +481,18 @@ impl Model {
                 //         - self.sink_points,
                 // )
             }
-            Some(serde_json::Value::Bool(true)) => {
-                todo!()
-                // self.problem.clone().minimise(
-                //     self.power_use * settings.weights.power_use
-                //         + waste_penalty_expr * settings.weights.nuclear_waste
-                //         - self.x[max_item] * 99999,
-                // )
+            Some(serde_json::Value::String(key)) => {
+                let key: ItemKey = key.clone().into();
+                self.problem.minimise(
+                    self.power_use * settings.weights.power_use
+                        + self.item_use * settings.weights.item_use
+                        + self.building_use * settings.weights.building_use
+                        + self.resource_use * settings.weights.resource_use
+                        + self.buildings_scaled * settings.weights.buildings_scaled
+                        + self.resources_scaled * settings.weights.resources_scaled
+                        + waste_penalty_expr * settings.weights.nuclear_waste
+                        - self.outputs[&key] * 99999,
+                )
             }
             _ => self.problem.minimise(
                 self.power_use * settings.weights.power_use

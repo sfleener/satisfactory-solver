@@ -1,0 +1,265 @@
+Extra Water: 600
+Extra Concrete: 8 3/4
+Extra Silica: 12 1/2
+Extra Cable: 28
+Extra Iron Ingot: 20
+Extra Reinforced Iron Plate: 2 1/2
+Extra Rotor: 1 1/4
+Extra Copper Sheet: 12 1/2
+Extra Screw: 5
+Extra Steel Pipe: 10 1/2
+Extra Fused Modular Frame: 1/2
+Extra Radio Control Unit: 2
+Extra Circuit Board: 1
+Extra Encased Industrial Beam: 1 1/4
+Extra Quartz Crystal: 13 1/2
+Extra Copper Ingot: 14
+Extra Aluminum Casing: 15
+Extra Heavy Modular Frame: 1 1/8
+Extra High-Speed Connector: 1
+Extra Quickwire: 15
+Extra Electromagnetic Control Rod: 6
+Component: ["Sulfuric Acid", "Alternate: Fertile Uranium", "Nitric Acid"]
+Component: ["Alternate: Sloppy Alumina", "Aluminum Ingot", "Aluminum Scrap"]
+Component: ["Cable", "Crystal Oscillator", "Quartz Crystal"]
+Component: ["Alternate: Silicon High-Speed Connector", "Alternate: Electromagnetic Connection Rod", "Alternate: Quickwire Stator"]
+Component: ["Alternate: Infused Uranium Cell", "Alternate: Cast Screw", "Alternate: Copper Rotor", "Alternate: Uranium Fuel Unit"]
+Component: ["Alternate: Steeled Frame", "Alternate: Encased Industrial Pipe", "Alternate: Heavy Encased Frame"]
+Component: ["Alternate: Crystal Computer", "Radio Control Unit", "Alternate: Instant Plutonium Cell", "Alternate: Plutonium Fuel Unit", "Pressure Conversion Cube", "Fused Modular Frame"]
+~~~ LAYER 0 ~~~
+150 Uranium Waste: {} --> 0 --> {4}
+930 Water: {} --> 0 --> {2, 4}
+540 Caterium Ore: {} --> 0 --> {1}
+1132 1/2 Raw Quartz: {} --> 0 --> {1, 5}
+680 Coal: {} --> 0 --> {2}
+472 1/2 Nitrogen Gas: {} --> 0 --> {4, 6}
+340 Iron Ore: {} --> 0 --> {1}
+275 Sulfur: {} --> 0 --> {4, 6}
+600 Bauxite: {} --> 0 --> {2}
+275 Uranium: {} --> 0 --> {4, 6}
+180 Limestone: {} --> 0 --> {2}
+160 Copper Ore: {} --> 0 --> {1}
+~~~ LAYER 1 ~~~
+32 Silica: {"Raw Quartz"} --> 1 --> {2, 3, 4, 6}
+2 Alternate: Copper Alloy Ingot: {"Copper Ore", "Iron Ore"} --> 1 --> {2}
+12 Caterium Ingot: {"Caterium Ore"} --> 1 --> {2}
+6 Alternate: Iron Alloy Ingot: {"Copper Ore", "Iron Ore"} --> 1 --> {2, 3, 6}
+~~~ LAYER 2 ~~~
+4 Alternate: Steamed Copper Sheet: {"Alternate: Copper Alloy Ingot", "Water"} --> 2 --> {3, 6}
+3 Aluminum Scrap: {"Alternate: Sloppy Alumina", "Coal"} --> 2 --> {2}
+12 Aluminum Ingot: {"Aluminum Scrap", "Silica"} --> 2 --> {3}
+8 Alternate: Fused Wire: {"Alternate: Copper Alloy Ingot", "Caterium Ingot"} --> 2 --> {4, 5}
+3 Alternate: Sloppy Alumina: {"Bauxite", "Water"} --> 2 --> {2}
+8 Alternate: Solid Steel Ingot: {"Alternate: Iron Alloy Ingot", "Coal"} --> 2 --> {3}
+3 Alternate: Fine Concrete: {"Limestone", "Silica"} --> 2 --> {5}
+13 Quickwire: {"Caterium Ingot"} --> 2 --> {4, 6}
+~~~ LAYER 3 ~~~
+14 Steel Pipe: {"Alternate: Solid Steel Ingot"} --> 3 --> {4, 5}
+8 Aluminum Casing: {"Aluminum Ingot"} --> 3 --> {6}
+4 Alternate: Steel Cast Plate: {"Alternate: Iron Alloy Ingot", "Alternate: Solid Steel Ingot"} --> 3 --> {4}
+2 Alternate: Silicon Circuit Board: {"Alternate: Steamed Copper Sheet", "Silica"} --> 3 --> {4, 6}
+~~~ LAYER 4 ~~~
+3 Nitric Acid: {"Alternate: Steel Cast Plate", "Nitrogen Gas", "Water"} --> 4 --> {4}
+3 Sulfuric Acid: {"Sulfur", "Water"} --> 4 --> {4}
+6 Alternate: Fertile Uranium: {"Nitric Acid", "Sulfuric Acid", "Uranium", "Uranium Waste"} --> 4 --> {6}
+2 Alternate: Quickwire Stator: {"Quickwire", "Steel Pipe"} --> 4 --> {4}
+8 Alternate: Stitched Iron Plate: {"Alternate: Fused Wire", "Alternate: Steel Cast Plate"} --> 4 --> {5}
+3 Alternate: Silicon High-Speed Connector: {"Alternate: Silicon Circuit Board", "Quickwire", "Silica"} --> 4 --> {4}
+2 Alternate: Electromagnetic Connection Rod: {"Alternate: Quickwire Stator", "Alternate: Silicon High-Speed Connector"} --> 4 --> {6}
+~~~ LAYER 5 ~~~
+11 Quartz Crystal: {"Raw Quartz"} --> 5 --> {5}
+13 Crystal Oscillator: {"Alternate: Stitched Iron Plate", "Cable", "Quartz Crystal"} --> 5 --> {6}
+5 Alternate: Encased Industrial Pipe: {"Alternate: Fine Concrete", "Steel Pipe"} --> 5 --> {5}
+5 Alternate: Steeled Frame: {"Alternate: Stitched Iron Plate", "Steel Pipe"} --> 5 --> {5}
+2 Alternate: Heavy Encased Frame: {"Alternate: Encased Industrial Pipe", "Alternate: Fine Concrete", "Alternate: Steeled Frame", "Steel Pipe"} --> 5 --> {6}
+7 Cable: {"Alternate: Fused Wire"} --> 5 --> {5}
+~~~ LAYER 6 ~~~
+1 Alternate: Copper Rotor: {"Alternate: Cast Screw", "Alternate: Steamed Copper Sheet"} --> 6 --> {6}
+4 Pressure Conversion Cube: {"Fused Modular Frame", "Radio Control Unit"} --> 6 --> {6}
+4 Radio Control Unit: {"Alternate: Crystal Computer", "Aluminum Casing", "Crystal Oscillator"} --> 6 --> {6}
+8 Alternate: Plutonium Fuel Unit: {"Alternate: Instant Plutonium Cell", "Pressure Conversion Cube"} --> 6 --> {7}
+3 Fused Modular Frame: {"Alternate: Heavy Encased Frame", "Aluminum Casing", "Nitrogen Gas"} --> 6 --> {6}
+8 Alternate: Instant Plutonium Cell: {"Alternate: Fertile Uranium", "Aluminum Casing"} --> 6 --> {6}
+5 Alternate: Infused Uranium Cell: {"Quickwire", "Silica", "Sulfur", "Uranium"} --> 6 --> {6}
+4 Alternate: Cast Screw: {"Alternate: Iron Alloy Ingot"} --> 6 --> {6}
+5 Alternate: Uranium Fuel Unit: {"Alternate: Copper Rotor", "Alternate: Electromagnetic Connection Rod", "Alternate: Infused Uranium Cell", "Crystal Oscillator"} --> 6 --> {7}
+3 Alternate: Crystal Computer: {"Alternate: Silicon Circuit Board", "Crystal Oscillator"} --> 6 --> {6}
+~~~ LAYER 7 ~~~
+0 output: {"Alternate: Plutonium Fuel Unit", "Alternate: Uranium Fuel Unit"} --> 7 --> {}
+flowchart TD
+  subgraph L0
+    40[150 Uranium Waste]
+    41[930 Water]
+    42[540 Caterium Ore]
+    43[1132 1/2 Raw Quartz]
+    44[680 Coal]
+    45[472 1/2 Nitrogen Gas]
+    46[340 Iron Ore]
+    47[275 Sulfur]
+    48[600 Bauxite]
+    49[275 Uranium]
+    50[180 Limestone]
+    51[160 Copper Ore]
+  end
+  subgraph L1
+    7[32 Silica]
+    11[2 Alternate: Copper Alloy Ingot]
+    23[12 Caterium Ingot]
+    31[6 Alternate: Iron Alloy Ingot]
+  end
+  subgraph L2
+    2[4 Alternate: Steamed Copper Sheet]
+    5[3 Aluminum Scrap]
+    6[12 Aluminum Ingot]
+    9[8 Alternate: Fused Wire]
+    16[3 Alternate: Sloppy Alumina]
+    30[8 Alternate: Solid Steel Ingot]
+    35[3 Alternate: Fine Concrete]
+    38[13 Quickwire]
+  end
+  subgraph L3
+    1[14 Steel Pipe]
+    4[8 Aluminum Casing]
+    21[4 Alternate: Steel Cast Plate]
+    37[2 Alternate: Silicon Circuit Board]
+  end
+  subgraph L4
+    13[3 Nitric Acid]
+    15[3 Sulfuric Acid]
+    20[6 Alternate: Fertile Uranium]
+    24[2 Alternate: Quickwire Stator]
+    27[8 Alternate: Stitched Iron Plate]
+    32[3 Alternate: Silicon High-Speed Connector]
+    34[2 Alternate: Electromagnetic Connection Rod]
+  end
+  subgraph L5
+    3[11 Quartz Crystal]
+    8[13 Crystal Oscillator]
+    26[5 Alternate: Encased Industrial Pipe]
+    29[5 Alternate: Steeled Frame]
+    33[2 Alternate: Heavy Encased Frame]
+    39[7 Cable]
+  end
+  subgraph L6
+    10[1 Alternate: Copper Rotor]
+    12[4 Pressure Conversion Cube]
+    14[4 Radio Control Unit]
+    17[8 Alternate: Plutonium Fuel Unit]
+    18[3 Fused Modular Frame]
+    19[8 Alternate: Instant Plutonium Cell]
+    22[5 Alternate: Infused Uranium Cell]
+    25[4 Alternate: Cast Screw]
+    28[5 Alternate: Uranium Fuel Unit]
+    36[3 Alternate: Crystal Computer]
+  end
+  subgraph L7
+    0[output]
+  end
+  subgraph Extras
+    Desc_Water_C[600 Water]
+    Desc_Cement_C[8 3/4 Concrete]
+    Desc_Silica_C[12 1/2 Silica]
+    Desc_Cable_C[28 Cable]
+    Desc_IronIngot_C[20 Iron Ingot]
+    Desc_IronPlateReinforced_C[2 1/2 Reinforced Iron Plate]
+    Desc_Rotor_C[1 1/4 Rotor]
+    Desc_CopperSheet_C[12 1/2 Copper Sheet]
+    Desc_IronScrew_C[5 Screw]
+    Desc_SteelPipe_C[10 1/2 Steel Pipe]
+    Desc_ModularFrameFused_C[1/2 Fused Modular Frame]
+    Desc_ModularFrameLightweight_C[2 Radio Control Unit]
+    Desc_CircuitBoard_C[1 Circuit Board]
+    Desc_SteelPlateReinforced_C[1 1/4 Encased Industrial Beam]
+    Desc_QuartzCrystal_C[13 1/2 Quartz Crystal]
+    Desc_CopperIngot_C[14 Copper Ingot]
+    Desc_AluminumCasing_C[15 Aluminum Casing]
+    Desc_ModularFrameHeavy_C[1 1/8 Heavy Modular Frame]
+    Desc_HighSpeedConnector_C[1 High-Speed Connector]
+    Desc_HighSpeedWire_C[15 Quickwire]
+    Desc_ElectromagneticControlRod_C[6 Electromagnetic Control Rod]
+  end
+  28 -->|3 Uranium Fuel Rod| 0
+  17 -->|4 Plutonium Fuel Rod| 0
+  30 -->|420 Steel Ingot| 1
+  11 -->|90 Copper Ingot| 2
+  6 -->|720 Aluminum Ingot| 4
+  16 -->|720 Alumina Solution| 5
+  5 -->|1080 Aluminum Scrap| 6
+  7 -->|900 Silica| 6
+  3 -->|234 Quartz Crystal| 8
+  39 -->|182 Cable| 8
+  27 -->|32 1/2 Reinforced Iron Plate| 8
+  11 -->|96 Copper Ingot| 9
+  23 -->|24 Caterium Ingot| 9
+  2 -->|22 1/2 Copper Sheet| 10
+  25 -->|195 Screw| 10
+  18 -->|4 Fused Modular Frame| 12
+  14 -->|8 Radio Control Unit| 12
+  21 -->|30 Iron Plate| 13
+  4 -->|160 Aluminum Casing| 14
+  8 -->|5 Crystal Oscillator| 14
+  36 -->|10 Computer| 14
+  19 -->|80 Encased Plutonium Cell| 17
+  12 -->|4 Pressure Conversion Cube| 17
+  33 -->|4 1/2 Heavy Modular Frame| 18
+  4 -->|225 Aluminum Casing| 18
+  20 -->|600 Non-Fissile Uranium| 19
+  4 -->|80 Aluminum Casing| 19
+  40 -->|150 Uranium Waste| 20
+  13 -->|90 Nitric Acid| 20
+  15 -->|150 Sulfuric Acid| 20
+  31 -->|60 Iron Ingot| 21
+  30 -->|60 Steel Ingot| 21
+  7 -->|75 Silica| 22
+  38 -->|375 Quickwire| 22
+  1 -->|32 Steel Pipe| 24
+  38 -->|120 Quickwire| 24
+  31 -->|50 Iron Ingot| 25
+  1 -->|120 Steel Pipe| 26
+  35 -->|100 Concrete| 26
+  21 -->|150 Iron Plate| 27
+  9 -->|300 Wire| 27
+  22 -->|100 Encased Uranium Cell| 28
+  34 -->|10 Electromagnetic Control Rod| 28
+  8 -->|3 Crystal Oscillator| 28
+  10 -->|10 Rotor| 28
+  27 -->|10 Reinforced Iron Plate| 29
+  1 -->|50 Steel Pipe| 29
+  31 -->|320 Iron Ingot| 30
+  38 -->|270 Quickwire| 32
+  7 -->|112 1/2 Silica| 32
+  37 -->|9 Circuit Board| 32
+  29 -->|15 Modular Frame| 33
+  26 -->|18 3/4 Encased Industrial Beam| 33
+  1 -->|67 1/2 Steel Pipe| 33
+  35 -->|41 1/4 Concrete| 33
+  24 -->|16 Stator| 34
+  32 -->|8 High-Speed Connector| 34
+  7 -->|45 Silica| 35
+  37 -->|15 Circuit Board| 36
+  8 -->|5 Crystal Oscillator| 36
+  2 -->|55 Copper Sheet| 37
+  7 -->|55 Silica| 37
+  23 -->|156 Caterium Ingot| 38
+  9 -->|420 Wire| 39
+  41 -->|90 Water| 2
+  41 -->|90 Water| 13
+  41 -->|150 Water| 15
+  41 -->|600 Water| 16
+  42 -->|540 Caterium Ore| 23
+  43 -->|412 1/2 Raw Quartz| 3
+  43 -->|720 Raw Quartz| 7
+  44 -->|360 Coal| 5
+  44 -->|320 Coal| 30
+  45 -->|360 Nitrogen Gas| 13
+  45 -->|112 1/2 Nitrogen Gas| 18
+  46 -->|100 Iron Ore| 11
+  46 -->|240 Iron Ore| 31
+  47 -->|150 Sulfur| 15
+  47 -->|125 Sulfur| 22
+  48 -->|600 Bauxite| 16
+  49 -->|150 Uranium| 20
+  49 -->|125 Uranium| 22
+  50 -->|180 Limestone| 35
+  51 -->|100 Copper Ore| 11
+  51 -->|60 Copper Ore| 31

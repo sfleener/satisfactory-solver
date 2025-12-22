@@ -7772,6 +7772,36 @@
             "machine": "Build_GeneratorBiomass_Automated_C",
             "power_use": 0.0
         },
+        "Build_NuclearHeater_RF_Desc_NuclearFuelRod_C": {
+            "name": "Nuclear Heater (Uranium Fuel Rod)",
+            "time": 480,
+            "ingredients": [
+                {
+                    "item": "Desc_NuclearFuelRod_C",
+                    "amount": 1
+                },
+                {
+                    "item": "Desc_Water_C",
+                    "amount": 4800.0
+                }
+            ],
+            "products": [
+                {
+                    "item": "Power_Produced_Nuclear",
+                    "amount": 20000.0
+                },
+                {
+                    "item": "Power_Produced",
+                    "amount": 20000.0
+                },
+                {
+                    "item": "Desc_NuclearWaste_C",
+                    "amount": 50.0
+                }
+            ],
+            "machine": "Build_NuclearHeater_RF",
+            "power_use": 0.0
+        },
         "Build_GeneratorNuclear_C_Desc_NuclearFuelRod_C": {
             "name": "Nuclear Power Plant (Uranium Fuel Rod)",
             "time": 300.0,
@@ -7934,6 +7964,11 @@
             "name": "Nuclear Power Plant",
             "power_use": 0,
             "power_produced": 2500.0
+        },
+        "Build_NuclearHeater_RF": {
+            "name": "Nuclear Heater",
+            "power_use": 0,
+            "power_produced": 2500
         }
     },
     "generators": {}

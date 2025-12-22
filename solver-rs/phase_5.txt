@@ -1,0 +1,480 @@
+Extra Water: 1155
+Extra Concrete: 15
+Extra Silica: 25
+Extra Iron Plate: 45
+Extra Petroleum Coke: 75
+Extra Iron Rod: 8
+Extra Wire: 20
+Extra Iron Ingot: 25
+Extra Rotor: 3 15/16
+Extra Modular Frame: 2 1/2
+Extra Screw: 20
+Extra Crystal Oscillator: 5/8
+Extra Motor: 4 7/16
+Extra Dark Matter Crystal: 10
+Extra Supercomputer: 1/8
+Extra Cooling System: 2 1/2
+Extra Ficsite Trigon: 25
+Extra Turbo Motor: 5/16
+Extra Time Crystal: 3
+Extra Reanimated SAM: 10
+Extra Diamonds: 4
+Extra Alclad Aluminum Sheet: 15
+Extra Superposition Oscillator: 8
+Extra Neural-Quantum Processor: 1
+Extra Steel Pipe: 19
+Extra Fused Modular Frame: 1/2
+Extra Radio Control Unit: 1/16
+Extra Caterium Ingot: 7 1/2
+Extra Circuit Board: 2
+Extra Plastic: 18
+Extra Encased Industrial Beam: 1
+Extra Rubber: 1 7/8
+Extra Polymer Resin: 700
+Extra Quartz Crystal: 5 1/4
+Extra Steel Ingot: 18
+Extra Aluminum Scrap: 60
+Extra Aluminum Casing: 20
+Extra Alumina Solution: 60
+Extra Computer: 2 1/2
+Extra Heavy Modular Frame: 2 1/2
+Extra Smart Plating: 1
+Extra High-Speed Connector: 1 1/8
+Extra Stator: 4
+Extra AI Limiter: 4 7/8
+Extra Quickwire: 45
+Extra Modular Engine: 3/4
+Extra Electromagnetic Control Rod: 2 5/16
+Extra Singularity Cell: 7 1/2
+Component: ["Alternate: Recycled Plastic", "Alternate: Recycled Rubber"]
+Component: ["Superposition Oscillator", "Alternate: Dark Matter Trap", "AI Expansion Server"]
+Component: ["Alternate: Recycled Plastic", "Alternate: Recycled Rubber"]
+Component: ["Steel Beam", "Versatile Framework"]
+Component: ["Alternate: Encased Industrial Pipe", "Alternate: Heavy Encased Frame"]
+Component: ["Aluminum Ingot", "Alternate: Electrode Aluminum Scrap"]
+Component: ["Nitric Acid", "Alternate: Heat-Fused Frame"]
+Component: ["Alternate: Fused Quickwire", "Alternate: Tempered Caterium Ingot"]
+Component: ["Alternate: Plastic Smart Plating", "Modular Engine"]
+Component: ["Alternate: Fused Quartz Crystal", "Alternate: Insulated Crystal Oscillator"]
+Component: ["Alternate: Insulated Cable", "Automated Wiring", "Adaptive Control Unit"]
+Component: ["Alternate: Silicon High-Speed Connector", "Supercomputer"]
+Component: ["Alternate: Oil-Based Diamonds", "Time Crystal"]
+Component: ["Ficsite Ingot (Aluminum)", "Ficsite Trigon"]
+Component: ["Copper Powder", "Pressure Conversion Cube", "Nuclear Pasta"]
+Component: ["Biochemical Sculptor", "Assembly Director System"]
+Component: ["Dark Matter Residue", "Alclad Aluminum Sheet", "Superposition Oscillator", "Alternate: Dark Matter Trap", "AI Expansion Server", "Magnetic Field Generator"]
+Component: ["Alternate: Turbo Electric Motor", "Alternate: Heat Exchanger", "Alternate: Cooling Device", "Thermal Propulsion Rocket", "Ballistic Warp Drive", "Singularity Cell"]
+~~~ LAYER 0 ~~~
+2 1/2 Excited Photonic Matter: {} --> 0 --> {7, 8}
+6590 Water: {} --> 0 --> {1, 2, 8, 9}
+675 Caterium Ore: {} --> 0 --> {3}
+1350 Raw Quartz: {} --> 0 --> {1, 5}
+1416 Coal: {} --> 0 --> {2, 5}
+600 Nitrogen Gas: {} --> 0 --> {8, 10}
+9090 Iron Ore: {} --> 0 --> {1}
+2040 Bauxite: {} --> 0 --> {1}
+2940 Limestone: {} --> 0 --> {1}
+2450 Crude Oil: {} --> 0 --> {1}
+8310 Copper Ore: {} --> 0 --> {1}
+960 SAM: {} --> 0 --> {1}
+~~~ LAYER 1 ~~~
+23 Time Crystal: {"Alternate: Oil-Based Diamonds"} --> 1 --> {7, 8}
+8 Reanimated SAM: {"SAM"} --> 1 --> {4, 8}
+7 Alternate: Oil-Based Diamonds: {"Crude Oil"} --> 1 --> {1}
+12 Alternate: Wet Concrete: {"Limestone", "Water"} --> 1 --> {7, 10}
+17 Alumina Solution: {"Bauxite", "Water"} --> 1 --> {3}
+35 Alternate: Heavy Oil Residue: {"Crude Oil"} --> 1 --> {2}
+161 Alternate: Copper Alloy Ingot: {"Copper Ore", "Iron Ore"} --> 1 --> {3, 8, 9}
+40 Alternate: Cheap Silica: {"Limestone", "Raw Quartz"} --> 1 --> {3, 6}
+26 Alternate: Iron Alloy Ingot: {"Copper Ore", "Iron Ore"} --> 1 --> {2, 4}
+~~~ LAYER 2 ~~~
+8 Petroleum Coke: {"Alternate: Heavy Oil Residue"} --> 2 --> {3}
+21 3/5 Alternate: Diluted Fuel: {"Alternate: Heavy Oil Residue", "Water"} --> 2 --> {3, 8}
+34 Alternate: Iron Wire: {"Alternate: Iron Alloy Ingot"} --> 2 --> {4, 8}
+30 Alternate: Solid Steel Ingot: {"Alternate: Iron Alloy Ingot", "Coal"} --> 2 --> {3, 7}
+~~~ LAYER 3 ~~~
+21 Alternate: Steel Rod: {"Alternate: Solid Steel Ingot"} --> 3 --> {4, 5}
+47 Steel Pipe: {"Alternate: Solid Steel Ingot"} --> 3 --> {4, 7}
+34 Alternate: Recycled Rubber: {"Alternate: Diluted Fuel", "Alternate: Recycled Plastic"} --> 3 --> {3, 5, 7, 8, 10}
+36 Aluminum Ingot: {"Alternate: Cheap Silica", "Alternate: Electrode Aluminum Scrap", "Alumina Solution"} --> 3 --> {4, 8}
+11 Alternate: Electrode Aluminum Scrap: {"Alumina Solution", "Petroleum Coke"} --> 3 --> {3}
+15 Alternate: Tempered Caterium Ingot: {"Caterium Ore", "Petroleum Coke"} --> 3 --> {3}
+44 Alternate: Fused Quickwire: {"Alternate: Copper Alloy Ingot", "Alternate: Tempered Caterium Ingot"} --> 3 --> {4, 5, 6}
+33 Alternate: Recycled Plastic: {"Alternate: Diluted Fuel", "Alternate: Recycled Rubber"} --> 3 --> {3, 4, 6, 7}
+~~~ LAYER 4 ~~~
+9 Ficsite Trigon: {"Ficsite Ingot (Aluminum)"} --> 4 --> {7, 9}
+3 Ficsite Ingot (Aluminum): {"Aluminum Ingot", "Reanimated SAM"} --> 4 --> {4}
+10 Aluminum Casing: {"Aluminum Ingot"} --> 4 --> {6, 10}
+13 Stator: {"Alternate: Iron Wire", "Steel Pipe"} --> 4 --> {5, 8}
+8 Alternate: Coated Iron Plate: {"Alternate: Iron Alloy Ingot", "Alternate: Recycled Plastic"} --> 4 --> {5, 8, 10}
+9 Alternate: Plastic AI Limiter: {"Alternate: Fused Quickwire", "Alternate: Recycled Plastic"} --> 4 --> {5, 6}
+36 Alternate: Caterium Circuit Board: {"Alternate: Fused Quickwire", "Alternate: Recycled Plastic"} --> 4 --> {5, 6, 8}
+76 Screw: {"Alternate: Steel Rod"} --> 4 --> {5, 6}
+~~~ LAYER 5 ~~~
+12 Rotor: {"Alternate: Steel Rod", "Screw"} --> 5 --> {6, 7, 10}
+28 Alternate: Adhered Iron Plate: {"Alternate: Coated Iron Plate", "Alternate: Recycled Rubber"} --> 5 --> {6, 7}
+6 Electromagnetic Control Rod: {"Alternate: Plastic AI Limiter", "Stator"} --> 5 --> {6, 8, 10}
+6 Alternate: Fused Quartz Crystal: {"Coal", "Raw Quartz"} --> 5 --> {5}
+17 Alternate: Insulated Crystal Oscillator: {"Alternate: Fused Quartz Crystal", "Alternate: Plastic AI Limiter", "Alternate: Recycled Rubber"} --> 5 --> {6, 8}
+18 Alternate: Caterium Computer: {"Alternate: Caterium Circuit Board", "Alternate: Fused Quickwire", "Alternate: Recycled Rubber"} --> 5 --> {6, 8}
+~~~ LAYER 6 ~~~
+13 Alternate: Bolted Frame: {"Alternate: Adhered Iron Plate", "Screw"} --> 6 --> {7}
+3 Supercomputer: {"Alternate: Caterium Computer", "Alternate: Plastic AI Limiter", "Alternate: Recycled Plastic", "Alternate: Silicon High-Speed Connector"} --> 6 --> {7, 9}
+13 Radio Control Unit: {"Alternate: Caterium Computer", "Alternate: Insulated Crystal Oscillator", "Aluminum Casing"} --> 6 --> {9, 10}
+4 Alternate: Electric Motor: {"Electromagnetic Control Rod", "Rotor"} --> 6 --> {7, 10}
+6 Alternate: Silicon High-Speed Connector: {"Alternate: Caterium Circuit Board", "Alternate: Cheap Silica", "Alternate: Fused Quickwire"} --> 6 --> {6}
+~~~ LAYER 7 ~~~
+1 Neural-Quantum Processor: {"Excited Photonic Matter", "Ficsite Trigon", "Supercomputer", "Time Crystal"} --> 7 --> {8}
+2 Steel Beam: {"Alternate: Solid Steel Ingot"} --> 7 --> {7}
+1 Versatile Framework: {"Alternate: Bolted Frame", "Steel Beam"} --> 7 --> {8}
+3 Alternate: Plastic Smart Plating: {"Alternate: Adhered Iron Plate", "Alternate: Recycled Plastic", "Rotor"} --> 7 --> {7}
+7 Modular Engine: {"Alternate: Electric Motor", "Alternate: Plastic Smart Plating", "Alternate: Recycled Rubber"} --> 7 --> {10}
+19 Alternate: Encased Industrial Pipe: {"Alternate: Wet Concrete", "Steel Pipe"} --> 7 --> {7}
+8 Alternate: Heavy Encased Frame: {"Alternate: Bolted Frame", "Alternate: Encased Industrial Pipe", "Alternate: Wet Concrete", "Steel Pipe"} --> 7 --> {8}
+~~~ LAYER 8 ~~~
+2 Magnetic Field Generator: {"Electromagnetic Control Rod", "Versatile Framework"} --> 8 --> {8}
+1/2 AI Expansion Server: {"Excited Photonic Matter", "Magnetic Field Generator", "Neural-Quantum Processor", "Superposition Oscillator"} --> 8 --> {8, 11}
+1 Dark Matter Residue: {"Reanimated SAM"} --> 8 --> {8}
+3 Superposition Oscillator: {"Alclad Aluminum Sheet", "Alternate: Dark Matter Trap", "Alternate: Insulated Crystal Oscillator", "Excited Photonic Matter"} --> 8 --> {8, 10}
+4 Alternate: Dark Matter Trap: {"AI Expansion Server", "Dark Matter Residue", "Neural-Quantum Processor", "Superposition Oscillator", "Time Crystal"} --> 8 --> {8, 10}
+5 Alclad Aluminum Sheet: {"Alternate: Copper Alloy Ingot", "Aluminum Ingot"} --> 8 --> {8}
+10 Automated Wiring: {"Alternate: Insulated Cable", "Stator"} --> 8 --> {8}
+5 Adaptive Control Unit: {"Alternate: Caterium Circuit Board", "Alternate: Caterium Computer", "Alternate: Heavy Encased Frame", "Automated Wiring"} --> 8 --> {9}
+4 Nitric Acid: {"Alternate: Coated Iron Plate", "Nitrogen Gas", "Water"} --> 8 --> {8}
+5 Alternate: Heat-Fused Frame: {"Alternate: Diluted Fuel", "Alternate: Heavy Encased Frame", "Aluminum Ingot", "Nitric Acid"} --> 8 --> {9, 10}
+5 Alternate: Insulated Cable: {"Alternate: Iron Wire", "Alternate: Recycled Rubber"} --> 8 --> {8}
+~~~ LAYER 9 ~~~
+3 1/3 Assembly Director System: {"Adaptive Control Unit", "Supercomputer"} --> 9 --> {9}
+24 Nuclear Pasta: {"Copper Powder", "Pressure Conversion Cube"} --> 9 --> {10, 11}
+5 Biochemical Sculptor: {"Assembly Director System", "Ficsite Trigon", "Water"} --> 9 --> {11}
+12 Pressure Conversion Cube: {"Alternate: Heat-Fused Frame", "Radio Control Unit"} --> 9 --> {9}
+48 Copper Powder: {"Alternate: Copper Alloy Ingot"} --> 9 --> {9}
+~~~ LAYER 10 ~~~
+2 1/2 Thermal Propulsion Rocket: {"Alternate: Cooling Device", "Alternate: Heat-Fused Frame", "Alternate: Turbo Electric Motor", "Modular Engine"} --> 10 --> {10}
+2 1/2 Ballistic Warp Drive: {"Alternate: Dark Matter Trap", "Singularity Cell", "Superposition Oscillator", "Thermal Propulsion Rocket"} --> 10 --> {11}
+2 Alternate: Cooling Device: {"Alternate: Electric Motor", "Alternate: Heat Exchanger", "Nitrogen Gas"} --> 10 --> {10}
+1 Alternate: Turbo Electric Motor: {"Alternate: Electric Motor", "Electromagnetic Control Rod", "Radio Control Unit", "Rotor"} --> 10 --> {10}
+2 Alternate: Heat Exchanger: {"Alternate: Recycled Rubber", "Aluminum Casing"} --> 10 --> {10}
+2 Singularity Cell: {"Alternate: Coated Iron Plate", "Alternate: Dark Matter Trap", "Alternate: Wet Concrete", "Nuclear Pasta"} --> 10 --> {10}
+~~~ LAYER 11 ~~~
+0 output: {"AI Expansion Server", "Ballistic Warp Drive", "Biochemical Sculptor", "Nuclear Pasta"} --> 11 --> {}
+flowchart TD
+  subgraph L0
+    9[2 1/2 Excited Photonic Matter]
+    71[6590 Water]
+    72[675 Caterium Ore]
+    73[1350 Raw Quartz]
+    74[1416 Coal]
+    75[600 Nitrogen Gas]
+    76[9090 Iron Ore]
+    77[2040 Bauxite]
+    78[2940 Limestone]
+    79[2450 Crude Oil]
+    80[8310 Copper Ore]
+    81[960 SAM]
+  end
+  subgraph L1
+    13[23 Time Crystal]
+    14[8 Reanimated SAM]
+    17[7 Alternate: Oil-Based Diamonds]
+    19[12 Alternate: Wet Concrete]
+    27[17 Alumina Solution]
+    32[35 Alternate: Heavy Oil Residue]
+    37[161 Alternate: Copper Alloy Ingot]
+    56[40 Alternate: Cheap Silica]
+    61[26 Alternate: Iron Alloy Ingot]
+  end
+  subgraph L2
+    16[8 Petroleum Coke]
+    49[21 3/5 Alternate: Diluted Fuel]
+    54[34 Alternate: Iron Wire]
+    60[30 Alternate: Solid Steel Ingot]
+  end
+  subgraph L3
+    20[21 Alternate: Steel Rod]
+    22[47 Steel Pipe]
+    24[34 Alternate: Recycled Rubber]
+    28[36 Aluminum Ingot]
+    35[11 Alternate: Electrode Aluminum Scrap]
+    53[15 Alternate: Tempered Caterium Ingot]
+    58[44 Alternate: Fused Quickwire]
+    59[33 Alternate: Recycled Plastic]
+  end
+  subgraph L4
+    12[9 Ficsite Trigon]
+    15[3 Ficsite Ingot (Aluminum)]
+    25[10 Aluminum Casing]
+    30[13 Stator]
+    38[8 Alternate: Coated Iron Plate]
+    51[9 Alternate: Plastic AI Limiter]
+    67[36 Alternate: Caterium Circuit Board]
+    70[76 Screw]
+  end
+  subgraph L5
+    36[12 Rotor]
+    40[28 Alternate: Adhered Iron Plate]
+    46[6 Electromagnetic Control Rod]
+    52[6 Alternate: Fused Quartz Crystal]
+    65[17 Alternate: Insulated Crystal Oscillator]
+    66[18 Alternate: Caterium Computer]
+  end
+  subgraph L6
+    39[13 Alternate: Bolted Frame]
+    44[3 Supercomputer]
+    45[13 Radio Control Unit]
+    48[4 Alternate: Electric Motor]
+    62[6 Alternate: Silicon High-Speed Connector]
+  end
+  subgraph L7
+    11[1 Neural-Quantum Processor]
+    21[2 Steel Beam]
+    23[1 Versatile Framework]
+    29[3 Alternate: Plastic Smart Plating]
+    33[7 Modular Engine]
+    57[19 Alternate: Encased Industrial Pipe]
+    63[8 Alternate: Heavy Encased Frame]
+  end
+  subgraph L8
+    1[2 Magnetic Field Generator]
+    7[1/2 AI Expansion Server]
+    8[1 Dark Matter Residue]
+    10[3 Superposition Oscillator]
+    18[4 Alternate: Dark Matter Trap]
+    26[5 Alclad Aluminum Sheet]
+    31[10 Automated Wiring]
+    34[5 Adaptive Control Unit]
+    42[4 Nitric Acid]
+    47[5 Alternate: Heat-Fused Frame]
+    68[5 Alternate: Insulated Cable]
+  end
+  subgraph L9
+    2[3 1/3 Assembly Director System]
+    4[24 Nuclear Pasta]
+    5[5 Biochemical Sculptor]
+    41[12 Pressure Conversion Cube]
+    43[48 Copper Powder]
+  end
+  subgraph L10
+    3[2 1/2 Thermal Propulsion Rocket]
+    6[2 1/2 Ballistic Warp Drive]
+    50[2 Alternate: Cooling Device]
+    55[1 Alternate: Turbo Electric Motor]
+    64[2 Alternate: Heat Exchanger]
+    69[2 Singularity Cell]
+  end
+  subgraph L11
+    0[output]
+  end
+  subgraph Extras
+    Desc_Water_C[1155 Water]
+    Desc_Cement_C[15 Concrete]
+    Desc_Silica_C[25 Silica]
+    Desc_IronPlate_C[45 Iron Plate]
+    Desc_PetroleumCoke_C[75 Petroleum Coke]
+    Desc_IronRod_C[8 Iron Rod]
+    Desc_Wire_C[20 Wire]
+    Desc_IronIngot_C[25 Iron Ingot]
+    Desc_Rotor_C[3 15/16 Rotor]
+    Desc_ModularFrame_C[2 1/2 Modular Frame]
+    Desc_IronScrew_C[20 Screw]
+    Desc_CrystalOscillator_C[5/8 Crystal Oscillator]
+    Desc_Motor_C[4 7/16 Motor]
+    Desc_DarkMatter_C[10 Dark Matter Crystal]
+    Desc_ComputerSuper_C[1/8 Supercomputer]
+    Desc_CoolingSystem_C[2 1/2 Cooling System]
+    Desc_FicsiteMesh_C[25 Ficsite Trigon]
+    Desc_MotorLightweight_C[5/16 Turbo Motor]
+    Desc_TimeCrystal_C[3 Time Crystal]
+    Desc_SAMIngot_C[10 Reanimated SAM]
+    Desc_Diamond_C[4 Diamonds]
+    Desc_AluminumPlate_C[15 Alclad Aluminum Sheet]
+    Desc_QuantumOscillator_C[8 Superposition Oscillator]
+    Desc_TemporalProcessor_C[1 Neural-Quantum Processor]
+    Desc_SteelPipe_C[19 Steel Pipe]
+    Desc_ModularFrameFused_C[1/2 Fused Modular Frame]
+    Desc_ModularFrameLightweight_C[1/16 Radio Control Unit]
+    Desc_GoldIngot_C[7 1/2 Caterium Ingot]
+    Desc_CircuitBoard_C[2 Circuit Board]
+    Desc_Plastic_C[18 Plastic]
+    Desc_SteelPlateReinforced_C[1 Encased Industrial Beam]
+    Desc_Rubber_C[1 7/8 Rubber]
+    Desc_PolymerResin_C[700 Polymer Resin]
+    Desc_QuartzCrystal_C[5 1/4 Quartz Crystal]
+    Desc_SteelIngot_C[18 Steel Ingot]
+    Desc_AluminumScrap_C[60 Aluminum Scrap]
+    Desc_AluminumCasing_C[20 Aluminum Casing]
+    Desc_AluminaSolution_C[60 Alumina Solution]
+    Desc_Computer_C[2 1/2 Computer]
+    Desc_ModularFrameHeavy_C[2 1/2 Heavy Modular Frame]
+    Desc_SpaceElevatorPart_1_C[1 Smart Plating]
+    Desc_HighSpeedConnector_C[1 1/8 High-Speed Connector]
+    Desc_Stator_C[4 Stator]
+    Desc_CircuitBoardHighSpeed_C[4 7/8 AI Limiter]
+    Desc_HighSpeedWire_C[45 Quickwire]
+    Desc_SpaceElevatorPart_4_C[3/4 Modular Engine]
+    Desc_ElectromagneticControlRod_C[2 5/16 Electromagnetic Control Rod]
+    Desc_SingularityCell_C[7 1/2 Singularity Cell]
+  end
+  4 -->|10 Nuclear Pasta| 0
+  5 -->|10 Biochemical Sculptor| 0
+  6 -->|2 1/2 Ballistic Warp Drive| 0
+  7 -->|2 AI Expansion Server| 0
+  23 -->|5 Versatile Framework| 1
+  46 -->|2 Electromagnetic Control Rod| 1
+  34 -->|5 Adaptive Control Unit| 2
+  44 -->|2 1/2 Supercomputer| 2
+  33 -->|6 1/4 Modular Engine| 3
+  55 -->|2 1/2 Turbo Motor| 3
+  50 -->|7 1/2 Cooling System| 3
+  47 -->|2 1/2 Fused Modular Frame| 3
+  43 -->|2400 Copper Powder| 4
+  41 -->|12 Pressure Conversion Cube| 4
+  2 -->|2 1/2 Assembly Director System| 5
+  12 -->|200 Ficsite Trigon| 5
+  3 -->|2 1/2 Thermal Propulsion Rocket| 6
+  69 -->|12 1/2 Singularity Cell| 6
+  10 -->|5 Superposition Oscillator| 6
+  18 -->|100 Dark Matter Crystal| 6
+  1 -->|2 Magnetic Field Generator| 7
+  11 -->|2 Neural-Quantum Processor| 7
+  10 -->|2 Superposition Oscillator| 7
+  9 -->|50 Excited Photonic Matter| 7
+  14 -->|50 Reanimated SAM| 8
+  18 -->|90 Dark Matter Crystal| 10
+  65 -->|15 Crystal Oscillator| 10
+  26 -->|135 Alclad Aluminum Sheet| 10
+  9 -->|375 Excited Photonic Matter| 10
+  13 -->|15 Time Crystal| 11
+  44 -->|3 Supercomputer| 11
+  12 -->|45 Ficsite Trigon| 11
+  9 -->|75 Excited Photonic Matter| 11
+  15 -->|90 Ficsite Ingot| 12
+  17 -->|276 Diamonds| 13
+  14 -->|180 Reanimated SAM| 15
+  28 -->|360 Aluminum Ingot| 15
+  32 -->|320 Heavy Oil Residue| 16
+  13 -->|120 Time Crystal| 18
+  7 -->|50 Dark Matter Residue| 18
+  8 -->|100 Dark Matter Residue| 18
+  10 -->|375 Dark Matter Residue| 18
+  11 -->|75 Dark Matter Residue| 18
+  60 -->|252 Steel Ingot| 20
+  60 -->|120 Steel Ingot| 21
+  60 -->|1410 Steel Ingot| 22
+  39 -->|2 1/2 Modular Frame| 23
+  21 -->|30 Steel Beam| 23
+  59 -->|1020 Plastic| 24
+  49 -->|1020 Fuel| 24
+  28 -->|900 Aluminum Ingot| 25
+  28 -->|150 Aluminum Ingot| 26
+  37 -->|50 Copper Ingot| 26
+  35 -->|3240 Aluminum Scrap| 28
+  27 -->|850 Silica| 28
+  56 -->|1850 Silica| 28
+  40 -->|7 1/2 Reinforced Iron Plate| 29
+  36 -->|7 1/2 Rotor| 29
+  59 -->|22 1/2 Plastic| 29
+  22 -->|195 Steel Pipe| 30
+  54 -->|520 Wire| 30
+  30 -->|25 Stator| 31
+  68 -->|500 Cable| 31
+  48 -->|14 Motor| 33
+  24 -->|105 Rubber| 33
+  29 -->|14 Smart Plating| 33
+  31 -->|25 Automated Wiring| 34
+  67 -->|25 Circuit Board| 34
+  63 -->|5 Heavy Modular Frame| 34
+  66 -->|10 Computer| 34
+  27 -->|1980 Alumina Solution| 35
+  16 -->|660 Petroleum Coke| 35
+  20 -->|240 Iron Rod| 36
+  70 -->|1200 Screw| 36
+  61 -->|300 Iron Ingot| 38
+  59 -->|60 Plastic| 38
+  40 -->|97 1/2 Reinforced Iron Plate| 39
+  70 -->|1820 Screw| 39
+  38 -->|315 Iron Plate| 40
+  24 -->|105 Rubber| 40
+  47 -->|12 Fused Modular Frame| 41
+  45 -->|24 Radio Control Unit| 41
+  38 -->|40 Iron Plate| 42
+  37 -->|14400 Copper Ingot| 43
+  66 -->|22 1/2 Computer| 44
+  51 -->|11 1/4 AI Limiter| 44
+  62 -->|16 7/8 High-Speed Connector| 44
+  59 -->|157 1/2 Plastic| 44
+  25 -->|520 Aluminum Casing| 45
+  65 -->|16 1/4 Crystal Oscillator| 45
+  66 -->|32 1/2 Computer| 45
+  30 -->|36 Stator| 46
+  51 -->|24 AI Limiter| 46
+  63 -->|15 Heavy Modular Frame| 47
+  28 -->|750 Aluminum Ingot| 47
+  42 -->|120 Nitric Acid| 47
+  49 -->|150 Fuel| 47
+  46 -->|15 Electromagnetic Control Rod| 48
+  36 -->|30 Rotor| 48
+  32 -->|1080 Heavy Oil Residue| 49
+  64 -->|20 Heat Sink| 50
+  48 -->|5 Motor| 50
+  58 -->|1080 Quickwire| 51
+  59 -->|252 Plastic| 51
+  16 -->|225 Petroleum Coke| 53
+  61 -->|425 Iron Ingot| 54
+  48 -->|6 9/16 Motor| 55
+  45 -->|8 7/16 Radio Control Unit| 55
+  46 -->|4 11/16 Electromagnetic Control Rod| 55
+  36 -->|6 9/16 Rotor| 55
+  22 -->|456 Steel Pipe| 57
+  19 -->|380 Concrete| 57
+  53 -->|330 Caterium Ingot| 58
+  37 -->|1650 Copper Ingot| 58
+  24 -->|990 Rubber| 59
+  49 -->|990 Fuel| 59
+  61 -->|1200 Iron Ingot| 60
+  58 -->|540 Quickwire| 62
+  56 -->|225 Silica| 62
+  67 -->|18 Circuit Board| 62
+  39 -->|60 Modular Frame| 63
+  57 -->|75 Encased Industrial Beam| 63
+  22 -->|270 Steel Pipe| 63
+  19 -->|165 Concrete| 63
+  25 -->|60 Aluminum Casing| 64
+  24 -->|60 Rubber| 64
+  52 -->|318 3/4 Quartz Crystal| 65
+  24 -->|223 1/8 Rubber| 65
+  51 -->|31 7/8 AI Limiter| 65
+  67 -->|270 Circuit Board| 66
+  58 -->|945 Quickwire| 66
+  24 -->|405 Rubber| 66
+  59 -->|450 Plastic| 67
+  58 -->|1350 Quickwire| 67
+  54 -->|225 Wire| 68
+  24 -->|150 Rubber| 68
+  4 -->|2 Nuclear Pasta| 69
+  18 -->|40 Dark Matter Crystal| 69
+  38 -->|200 Iron Plate| 69
+  19 -->|400 Concrete| 69
+  20 -->|760 Iron Rod| 70
+  71 -->|50 Water| 5
+  71 -->|1200 Water| 19
+  71 -->|3060 Water| 27
+  71 -->|120 Water| 42
+  71 -->|2160 Water| 49
+  72 -->|675 Caterium Ore| 53
+  73 -->|450 Raw Quartz| 52
+  73 -->|900 Raw Quartz| 56
+  74 -->|216 Coal| 52
+  74 -->|1200 Coal| 60
+  75 -->|480 Nitrogen Gas| 42
+  75 -->|120 Nitrogen Gas| 50
+  76 -->|8050 Iron Ore| 37
+  76 -->|1040 Iron Ore| 61
+  77 -->|2040 Bauxite| 27
+  78 -->|1440 Limestone| 19
+  78 -->|1500 Limestone| 56
+  79 -->|1400 Crude Oil| 17
+  79 -->|1050 Crude Oil| 32
+  80 -->|8050 Copper Ore| 37
+  80 -->|260 Copper Ore| 61
+  81 -->|960 SAM| 14

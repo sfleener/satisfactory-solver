@@ -4,7 +4,7 @@ use num::{FromPrimitive, Zero};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::iter::Sum;
 use std::marker::PhantomData as Boo;
 use std::ops::{Add, AddAssign, Div, Mul, Sub};
@@ -13,6 +13,7 @@ pub mod units {
     use std::any::type_name;
     use std::fmt::{Debug, Display, Formatter};
     use std::marker::PhantomData;
+    use derive_more::Display;
 
     pub trait Unit {
         fn new() -> Self;
@@ -27,27 +28,27 @@ pub mod units {
         }
     }
 
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Unitless;
 
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Points;
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Megawatts;
 
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Items;
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Recipes;
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Machines;
 
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Second;
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Minute;
 
-    #[derive(Default, Copy, Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+    #[derive(Default, Copy, Debug, Display, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct One;
 
     #[derive(Default, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -217,7 +218,7 @@ impl<Unit> From<f64> for Rat<Unit> {
             return Self(RawRat::new(whole, 1), Boo);
         }
 
-        for i in 1i64..=20 {
+        for i in 1i64..=10000 {
             for j in 1..=i {
                 if is_near(fractional, j as f64 / i as f64) {
                     return Self(RawRat::new((whole * i) + j, i), Boo);
@@ -229,9 +230,16 @@ impl<Unit> From<f64> for Rat<Unit> {
     }
 }
 
-impl<Unit> Debug for Rat<Unit>
+impl<Unit> Debug for Rat<Unit> where Unit: units::Unit + Display {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Debug::fmt(&self.0, f)
+        Display::fmt(&self, f)
+    }
+}
+
+impl<Unit> Display for Rat<Unit>
 where
-    Unit: units::Unit + Debug,
+    Unit: units::Unit + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let this = self.0.reduced();

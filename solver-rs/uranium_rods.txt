@@ -1,0 +1,149 @@
+Extra Silica: 10
+Extra Iron Plate: 2 1/2
+Extra Wire: 15
+Extra Cable: 18
+Extra Reinforced Iron Plate: 3 3/4
+Extra Copper Sheet: 2 1/2
+Extra Steel Pipe: 8
+Extra Circuit Board: 3 1/2
+Extra Copper Ingot: 4
+Extra High-Speed Connector: 1
+Extra Quickwire: 15
+Extra Electromagnetic Control Rod: 6
+Component: ["Copper Sheet", "Alternate: Silicon Circuit Board"]
+Component: ["Steel Ingot", "Steel Pipe"]
+Component: ["Alternate: Silicon High-Speed Connector", "Alternate: Electromagnetic Connection Rod", "Alternate: Quickwire Stator"]
+Component: ["Iron Ingot", "Alternate: Stitched Iron Plate", "Iron Plate"]
+Component: ["Cable", "Alternate: Fused Quartz Crystal", "Alternate: Steel Rotor", "Alternate: Infused Uranium Cell", "Alternate: Uranium Fuel Unit", "Crystal Oscillator"]
+~~~ LAYER 0 ~~~
+495 Caterium Ore: {} --> 0 --> {1}
+210 Raw Quartz: {} --> 0 --> {1, 4}
+126 Coal: {} --> 0 --> {1, 4}
+200 Iron Ore: {} --> 0 --> {1, 3}
+125 Sulfur: {} --> 0 --> {4}
+125 Uranium: {} --> 0 --> {4}
+50 Copper Ore: {} --> 0 --> {1}
+~~~ LAYER 1 ~~~
+3 Steel Pipe: {"Steel Ingot"} --> 1 --> {3, 4}
+2 Steel Ingot: {"Coal", "Iron Ore"} --> 1 --> {1}
+6 Silica: {"Raw Quartz"} --> 1 --> {2, 3, 4}
+1 Alternate: Copper Alloy Ingot: {"Copper Ore", "Iron Ore"} --> 1 --> {2}
+11 Caterium Ingot: {"Caterium Ore"} --> 1 --> {2}
+~~~ LAYER 2 ~~~
+3 Alternate: Fused Wire: {"Alternate: Copper Alloy Ingot", "Caterium Ingot"} --> 2 --> {3, 4}
+3 Copper Sheet: {"Alternate: Copper Alloy Ingot"} --> 2 --> {2}
+1 Alternate: Silicon Circuit Board: {"Copper Sheet", "Silica"} --> 2 --> {3}
+13 Quickwire: {"Caterium Ingot"} --> 2 --> {3, 4}
+~~~ LAYER 3 ~~~
+2 Iron Plate: {"Iron Ingot"} --> 3 --> {3}
+2 Iron Ingot: {"Iron Ore"} --> 3 --> {3}
+2 Alternate: Quickwire Stator: {"Quickwire", "Steel Pipe"} --> 3 --> {3}
+2 Alternate: Stitched Iron Plate: {"Alternate: Fused Wire", "Iron Plate"} --> 3 --> {4}
+3 Alternate: Silicon High-Speed Connector: {"Alternate: Silicon Circuit Board", "Quickwire", "Silica"} --> 3 --> {3}
+2 Alternate: Electromagnetic Connection Rod: {"Alternate: Quickwire Stator", "Alternate: Silicon High-Speed Connector"} --> 3 --> {4}
+~~~ LAYER 4 ~~~
+3 Crystal Oscillator: {"Alternate: Fused Quartz Crystal", "Alternate: Stitched Iron Plate", "Cable"} --> 4 --> {4}
+1 Alternate: Fused Quartz Crystal: {"Coal", "Raw Quartz"} --> 4 --> {4}
+5 Alternate: Infused Uranium Cell: {"Quickwire", "Silica", "Sulfur", "Uranium"} --> 4 --> {4}
+2 Alternate: Steel Rotor: {"Alternate: Fused Wire", "Steel Pipe"} --> 4 --> {4}
+5 Alternate: Uranium Fuel Unit: {"Alternate: Electromagnetic Connection Rod", "Alternate: Infused Uranium Cell", "Alternate: Steel Rotor", "Crystal Oscillator"} --> 4 --> {5}
+2 Cable: {"Alternate: Fused Wire"} --> 4 --> {4}
+~~~ LAYER 5 ~~~
+0 output: {"Alternate: Uranium Fuel Unit"} --> 5 --> {}
+flowchart TD
+  subgraph L0
+    22[495 Caterium Ore]
+    23[210 Raw Quartz]
+    24[126 Coal]
+    25[200 Iron Ore]
+    26[125 Sulfur]
+    27[125 Uranium]
+    28[50 Copper Ore]
+  end
+  subgraph L1
+    3[3 Steel Pipe]
+    4[2 Steel Ingot]
+    5[6 Silica]
+    9[1 Alternate: Copper Alloy Ingot]
+    12[11 Caterium Ingot]
+  end
+  subgraph L2
+    7[3 Alternate: Fused Wire]
+    8[3 Copper Sheet]
+    19[1 Alternate: Silicon Circuit Board]
+    20[13 Quickwire]
+  end
+  subgraph L3
+    1[2 Iron Plate]
+    2[2 Iron Ingot]
+    13[2 Alternate: Quickwire Stator]
+    15[2 Alternate: Stitched Iron Plate]
+    17[3 Alternate: Silicon High-Speed Connector]
+    18[2 Alternate: Electromagnetic Connection Rod]
+  end
+  subgraph L4
+    6[3 Crystal Oscillator]
+    10[1 Alternate: Fused Quartz Crystal]
+    11[5 Alternate: Infused Uranium Cell]
+    14[2 Alternate: Steel Rotor]
+    16[5 Alternate: Uranium Fuel Unit]
+    21[2 Cable]
+  end
+  subgraph L5
+    0[output]
+  end
+  subgraph Extras
+    Desc_Silica_C[10 Silica]
+    Desc_IronPlate_C[2 1/2 Iron Plate]
+    Desc_Wire_C[15 Wire]
+    Desc_Cable_C[18 Cable]
+    Desc_IronPlateReinforced_C[3 3/4 Reinforced Iron Plate]
+    Desc_CopperSheet_C[2 1/2 Copper Sheet]
+    Desc_SteelPipe_C[8 Steel Pipe]
+    Desc_CircuitBoard_C[3 1/2 Circuit Board]
+    Desc_CopperIngot_C[4 Copper Ingot]
+    Desc_HighSpeedConnector_C[1 High-Speed Connector]
+    Desc_HighSpeedWire_C[15 Quickwire]
+    Desc_ElectromagneticControlRod_C[6 Electromagnetic Control Rod]
+  end
+  16 -->|3 Uranium Fuel Rod| 0
+  2 -->|60 Iron Ingot| 1
+  4 -->|90 Steel Ingot| 3
+  10 -->|54 Quartz Crystal| 6
+  21 -->|42 Cable| 6
+  15 -->|7 1/2 Reinforced Iron Plate| 6
+  9 -->|36 Copper Ingot| 7
+  12 -->|9 Caterium Ingot| 7
+  9 -->|60 Copper Ingot| 8
+  5 -->|75 Silica| 11
+  20 -->|375 Quickwire| 11
+  3 -->|32 Steel Pipe| 13
+  20 -->|120 Quickwire| 13
+  3 -->|20 Steel Pipe| 14
+  7 -->|60 Wire| 14
+  1 -->|37 1/2 Iron Plate| 15
+  7 -->|75 Wire| 15
+  11 -->|100 Encased Uranium Cell| 16
+  18 -->|10 Electromagnetic Control Rod| 16
+  6 -->|3 Crystal Oscillator| 16
+  14 -->|10 Rotor| 16
+  20 -->|270 Quickwire| 17
+  5 -->|112 1/2 Silica| 17
+  19 -->|9 Circuit Board| 17
+  13 -->|16 Stator| 18
+  17 -->|8 High-Speed Connector| 18
+  8 -->|27 1/2 Copper Sheet| 19
+  5 -->|27 1/2 Silica| 19
+  12 -->|156 Caterium Ingot| 20
+  7 -->|120 Wire| 21
+  22 -->|495 Caterium Ore| 12
+  23 -->|135 Raw Quartz| 5
+  23 -->|75 Raw Quartz| 10
+  24 -->|90 Coal| 4
+  24 -->|36 Coal| 10
+  25 -->|60 Iron Ore| 2
+  25 -->|90 Iron Ore| 4
+  25 -->|50 Iron Ore| 9
+  26 -->|125 Sulfur| 11
+  27 -->|125 Uranium| 11
+  28 -->|50 Copper Ore| 9
