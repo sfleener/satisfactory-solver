@@ -3,10 +3,11 @@ use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use crate::solver::SolutionValues;
 use assertables::{assert_ge, assert_le};
+use bimap::BiBTreeMap;
 use itertools::Itertools;
 use petgraph::dot::Dot;
 use petgraph::graph::{DiGraph, NodeIndex};
-use petgraph::visit::{EdgeRef, IntoEdgesDirected};
+use petgraph::visit::{Bfs, EdgeRef, IntoEdgesDirected, Topo, Walker, WalkerIter};
 use petgraph::{Direction, EdgeDirection};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{Debug, Formatter};
@@ -83,7 +84,10 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             continue;
         }
 
-        assert!(!needs_amount.is_near_zero(), "Non-zero needs remaining: {needs_amount:?}");
+        assert!(
+            !needs_amount.is_near_zero(),
+            "Non-zero needs remaining: {needs_amount:?}"
+        );
         if let Some((provides_node, provides_amount)) = provides_inputs.get_mut(&needs_key)
             && !provides_amount.is_near_zero()
         {
@@ -242,7 +246,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             if node == output_node {
                 continue;
             }
-            if ranks[&node] == 0 {
+            if ranks[&node].rank == 0 {
                 continue;
             }
             if graph.edges_directed(node, Direction::Outgoing).count() != 1 {
@@ -293,30 +297,79 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
     }
 
-    for (rank, group) in ranks
+    for (rank, layer) in ranks
         .iter()
-        .sorted_by_key(|(_, v)| **v)
-        .chunk_by(|(_, v)| **v)
+        .sorted_by_key(|(_, v)| v.rank)
+        .chunk_by(|(_, v)| v.rank)
         .into_iter()
-        .sorted_by_key(|(r, _)| *r)
     {
-        println!("~~~ LAYER {rank} ~~~");
-        for (&node, _) in group {
-            let (amount, name) = graph.node_weight(node).unwrap();
-            let incoming = graph
-                .edges_directed(node, Direction::Incoming)
-                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
-                .collect::<BTreeSet<_>>();
-            let outgoing = graph
-                .edges_directed(node, Direction::Outgoing)
-                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                .map(|edge| *ranks.get(&edge.target()).unwrap())
-                .collect::<BTreeSet<_>>();
-            println!(
-                "{} {}: {:?} --> {} --> {:?}",
-                amount, name, incoming, rank, outgoing
-            );
+        println!("~~~ LAYER {} ~~~", rank);
+        for (c_id, component) in layer
+            .sorted_by_key(|(_, v)| v.component)
+            .chunk_by(|(_, v)| v.component)
+            .into_iter()
+        {
+            if c_id.is_none() {
+                for (&node, _) in component {
+                    let (amount, name) = graph.node_weight(node).unwrap();
+                    let incoming = graph
+                        .edges_directed(node, Direction::Incoming)
+                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                        .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
+                        .collect::<BTreeSet<_>>();
+                    let outgoing = graph
+                        .edges_directed(node, Direction::Outgoing)
+                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                        .map(|edge| *ranks.get(&edge.target()).unwrap())
+                        .collect::<BTreeSet<_>>();
+                    println!(
+                        "{} {}: {:?} --> {} --> {:?}",
+                        amount, name, incoming, rank, outgoing
+                    );
+                }
+            } else {
+                #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+                struct GlobalNodeIndex(NodeIndex);
+                #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+                struct LocalNodeIndex(NodeIndex);
+
+                let component_nodes = component
+                    .into_iter()
+                    .map(|(i, _)| GlobalNodeIndex(*i))
+                    .collect::<Vec<_>>();
+
+                let mut local = DiGraph::<GlobalNodeIndex, ()>::new();
+                let local_nodes = BiBTreeMap::from_iter(
+                    component_nodes
+                        .iter()
+                        .copied()
+                        .map(|i| (i, LocalNodeIndex(local.add_node(i)))),
+                );
+                for &id in &component_nodes {
+                    for edge in graph
+                        .edges_directed(id.0, Direction::Outgoing)
+                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                    {
+                        local.add_edge(edge.target(), id.0, ());
+                    }
+                }
+
+                let mut tree: Option<termtree::Tree<&str>> = None;
+                for node in Bfs::new(&local, Topo::new(&local).next(&local).unwrap()).iter(&local) {
+                    let node = LocalNodeIndex(node);
+                    if tree.is_none() {
+                        tree = Some(termtree::Tree::new(
+                            graph
+                                .node_weight(local_nodes.get_by_right(&node).unwrap().0)
+                                .unwrap()
+                                .1
+                                .as_str(),
+                        ));
+                    } else {
+                        todo!()
+                    }
+                }
+            }
         }
     }
 
@@ -338,67 +391,75 @@ enum BeltKind {
     InlineLink,
 }
 
-fn deduce_ranks(graph: &ProductionGraph) -> BTreeMap<NodeIndex, u16> {
-    let mut ranks = BTreeMap::<_, u16>::new();
+fn deduce_ranks(graph: &ProductionGraph) -> BTreeMap<NodeIndex, Rank> {
+    let mut ranks = BTreeMap::<_, Rank>::new();
     let components = petgraph::algo::tarjan_scc(&graph);
 
+    let mut next_component_id = 0;
     for component in components.iter().rev() {
         if component.is_empty() {
             continue;
-        } else if component.len() > 1 {
-            let component_nodes = component
-                .iter()
-                .map(|i| &graph.node_weight(*i).unwrap().1)
-                .collect::<Vec<_>>();
-            println!("Component: {component_nodes:?}");
+        }
 
-            let max_component_parent = component
-                .iter()
-                .flat_map(|&node| {
-                    graph
-                        .edges_directed(node, Direction::Incoming)
-                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                        .filter_map(|edge| ranks.get(&edge.source()).copied())
-                })
-                .max()
-                .unwrap();
+        let component_id = if component.len() <= 1 {
+            None
+        } else {
+            let id = next_component_id;
+            next_component_id += 1;
+            Some(id)
+        };
+        let component_nodes = component
+            .iter()
+            .map(|i| &graph.node_weight(*i).unwrap().1)
+            .collect::<Vec<_>>();
+        println!("Component: {component_nodes:?}");
 
+        let max_component_parent = component
+            .iter()
+            .flat_map(|&node| {
+                graph
+                    .edges_directed(node, Direction::Incoming)
+                    .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                    .filter_map(|edge| ranks.get(&edge.source()).copied().map(|r| r.rank))
+            })
+            .max();
+
+        if let Some(max) = max_component_parent {
             for &node in component {
-                ranks.insert(node, max_component_parent + 1);
+                ranks.insert(
+                    node,
+                    Rank {
+                        rank: max + 1,
+                        component: component_id,
+                    },
+                );
             }
         } else {
-            let node = component[0];
-            if ranks.contains_key(&node) {
-                continue;
+            for &node in component {
+                ranks.insert(
+                    node,
+                    Rank {
+                        rank: 0,
+                        component: component_id,
+                    },
+                );
             }
-            let max = graph
-                .edges_directed(node, Direction::Incoming)
-                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                .filter_map(|edge| ranks.get(&edge.source()).copied())
-                .max();
-
-            if let Some(max) = max {
-                ranks.insert(node, max + 1);
-            } else if graph
-                .edges_directed(node, Direction::Incoming)
-                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                .next()
-                .is_none()
-            {
-                ranks.insert(node, 0);
-            } else {
-                continue;
-            };
         }
     }
     ranks
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+struct Rank {
+    rank: u16,
+    component: Option<u8>,
 }
 
 type ProductionGraph = DiGraph<(Rat<Recipes>, String), BeltKind>;
 
 struct DotGraphFmt<'a> {
     graph: &'a ProductionGraph,
-    ranks: &'a BTreeMap<NodeIndex, u16>,
+    ranks: &'a BTreeMap<NodeIndex, Rank>,
     data: &'a Data,
     extra_inputs: &'a BTreeMap<ItemKey, (NodeIndex, ItemsPerMinute)>,
     extras: &'a BTreeMap<ItemKey, BTreeMap<RecipeKey, (ItemsPerMinutePerRecipe, ItemsPerMinute)>>,
@@ -414,7 +475,7 @@ impl Debug for DotGraphFmt<'_> {
         f.write_str("flowchart TD\n")?;
 
         for (rank, nodes) in reverse_ranks {
-            writeln!(f, "  subgraph L{rank}",)?;
+            writeln!(f, "  subgraph L{}", rank.rank)?;
 
             for node in nodes {
                 let (count, name) = self.graph.node_weight(node).unwrap();

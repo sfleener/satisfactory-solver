@@ -10,10 +10,10 @@ use std::marker::PhantomData as Boo;
 use std::ops::{Add, AddAssign, Div, Mul, Sub};
 
 pub mod units {
+    use derive_more::Display;
     use std::any::type_name;
     use std::fmt::{Debug, Display, Formatter};
     use std::marker::PhantomData;
-    use derive_more::Display;
 
     pub trait Unit {
         fn new() -> Self;
@@ -230,7 +230,10 @@ impl<Unit> From<f64> for Rat<Unit> {
     }
 }
 
-impl<Unit> Debug for Rat<Unit> where Unit: units::Unit + Display {
+impl<Unit> Debug for Rat<Unit>
+where
+    Unit: units::Unit + Display,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // Debug::fmt(&self.0, f)
         Display::fmt(&self, f)

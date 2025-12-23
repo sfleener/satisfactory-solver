@@ -221,7 +221,10 @@ impl Model {
             return;
         }
 
-        let max_item = settings.max_item.as_ref().and_then(|i| i.as_str().map(|i| ItemKey::from(i)));
+        let max_item = settings
+            .max_item
+            .as_ref()
+            .and_then(|i| i.as_str().map(|i| ItemKey::from(i)));
 
         for (item, &amount) in &settings.outputs {
             if max_item.as_ref().is_some_and(|i| i == item) {
