@@ -5,12 +5,14 @@ use crate::solver::SolutionValues;
 use assertables::{assert_ge, assert_le};
 use bimap::BiBTreeMap;
 use itertools::Itertools;
+use petgraph::data::DataMap;
 use petgraph::dot::Dot;
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::visit::{Bfs, EdgeRef, IntoEdgesDirected, Topo, Walker, WalkerIter};
 use petgraph::{Direction, EdgeDirection};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{Debug, Formatter};
+use termtree::Tree;
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     let mut graph = ProductionGraph::new();
@@ -328,7 +330,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     );
                 }
             } else {
-                #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+                #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
                 struct GlobalNodeIndex(NodeIndex);
                 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
                 struct LocalNodeIndex(NodeIndex);
@@ -350,25 +352,61 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                         .edges_directed(id.0, Direction::Outgoing)
                         .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
                     {
+                        if local.node_weight(edge.target()).is_none()
+                            || local.node_weight(id.0).is_none()
+                        {
+                            continue;
+                        };
                         local.add_edge(edge.target(), id.0, ());
                     }
                 }
 
-                let mut tree: Option<termtree::Tree<&str>> = None;
-                for node in Bfs::new(&local, Topo::new(&local).next(&local).unwrap()).iter(&local) {
-                    let node = LocalNodeIndex(node);
-                    if tree.is_none() {
-                        tree = Some(termtree::Tree::new(
-                            graph
-                                .node_weight(local_nodes.get_by_right(&node).unwrap().0)
-                                .unwrap()
-                                .1
-                                .as_str(),
-                        ));
-                    } else {
-                        todo!()
+                fn tree<'a>(
+                    node: GlobalNodeIndex,
+                    ranks: &BTreeMap<NodeIndex, Rank>,
+                    local_nodes: &BiBTreeMap<GlobalNodeIndex, LocalNodeIndex>,
+                    graph: &'a ProductionGraph,
+                ) -> Tree<String> {
+                    let (amount, name) = graph.node_weight(node.0).unwrap();
+                    let incoming = graph
+                        .edges_directed(node.0, Direction::Incoming)
+                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                        .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
+                        .collect::<BTreeSet<_>>();
+                    let outgoing = graph
+                        .edges_directed(node.0, Direction::Outgoing)
+                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                        .map(|edge| *ranks.get(&edge.target()).unwrap())
+                        .collect::<BTreeSet<_>>();
+                    let s = format!(
+                        "{} {}: {:?} --> ... --> {:?}",
+                        amount, name, incoming, outgoing
+                    );
+                    // let mut t = Tree::new(graph.node_weight(node.0).unwrap().1.as_str());
+                    let mut t = Tree::new(s);
+                    for edge in graph
+                        .edges_directed(node.0, Direction::Incoming)
+                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                    {
+                        let g = GlobalNodeIndex(edge.source());
+                        if !local_nodes.contains_left(&g) {
+                            continue;
+                        }
+                        t.push(tree(g, ranks, local_nodes, graph));
                     }
+                    t
                 }
+
+                let root = LocalNodeIndex(Topo::new(&local).next(&local).unwrap());
+                print!(
+                    "{}",
+                    tree(
+                        *local_nodes.get_by_right(&root).unwrap(),
+                        &ranks,
+                        &local_nodes,
+                        &graph
+                    )
+                );
             }
         }
     }
