@@ -376,7 +376,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     let outgoing = graph
                         .edges_directed(node.0, Direction::Outgoing)
                         .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                        .map(|edge| *ranks.get(&edge.target()).unwrap())
+                        .map(|edge| ranks.get(&edge.target()).unwrap().rank)
                         .collect::<BTreeSet<_>>();
                     let s = format!(
                         "{} {}: {:?} --> ... --> {:?}",
