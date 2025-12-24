@@ -46,24 +46,6 @@ Extra Quickwire: 45
 Extra Modular Engine: 3/4
 Extra Electromagnetic Control Rod: 2 5/16
 Extra Singularity Cell: 7 1/2
-Component: ["Alternate: Recycled Plastic", "Alternate: Recycled Rubber"]
-Component: ["Superposition Oscillator", "Alternate: Dark Matter Trap", "AI Expansion Server"]
-Component: ["Alternate: Recycled Plastic", "Alternate: Recycled Rubber"]
-Component: ["Steel Beam", "Versatile Framework"]
-Component: ["Alternate: Encased Industrial Pipe", "Alternate: Heavy Encased Frame"]
-Component: ["Aluminum Ingot", "Alternate: Electrode Aluminum Scrap"]
-Component: ["Nitric Acid", "Alternate: Heat-Fused Frame"]
-Component: ["Alternate: Fused Quickwire", "Alternate: Tempered Caterium Ingot"]
-Component: ["Alternate: Plastic Smart Plating", "Modular Engine"]
-Component: ["Alternate: Fused Quartz Crystal", "Alternate: Insulated Crystal Oscillator"]
-Component: ["Alternate: Insulated Cable", "Automated Wiring", "Adaptive Control Unit"]
-Component: ["Alternate: Silicon High-Speed Connector", "Supercomputer"]
-Component: ["Alternate: Oil-Based Diamonds", "Time Crystal"]
-Component: ["Ficsite Ingot (Aluminum)", "Ficsite Trigon"]
-Component: ["Copper Powder", "Pressure Conversion Cube", "Nuclear Pasta"]
-Component: ["Biochemical Sculptor", "Assembly Director System"]
-Component: ["Dark Matter Residue", "Alclad Aluminum Sheet", "Superposition Oscillator", "Alternate: Dark Matter Trap", "AI Expansion Server", "Magnetic Field Generator"]
-Component: ["Alternate: Turbo Electric Motor", "Alternate: Heat Exchanger", "Alternate: Cooling Device", "Thermal Propulsion Rocket", "Ballistic Warp Drive", "Singularity Cell"]
 ~~~ LAYER 0 ~~~
 2 1/2 Excited Photonic Matter: {} --> 0 --> {7, 8}
 6590 Water: {} --> 0 --> {1, 2, 8, 9}
@@ -78,15 +60,16 @@ Component: ["Alternate: Turbo Electric Motor", "Alternate: Heat Exchanger", "Alt
 8310 Copper Ore: {} --> 0 --> {1}
 960 SAM: {} --> 0 --> {1}
 ~~~ LAYER 1 ~~~
-23 Time Crystal: {"Alternate: Oil-Based Diamonds"} --> 1 --> {7, 8}
 8 Reanimated SAM: {"SAM"} --> 1 --> {4, 8}
-7 Alternate: Oil-Based Diamonds: {"Crude Oil"} --> 1 --> {1}
 12 Alternate: Wet Concrete: {"Limestone", "Water"} --> 1 --> {7, 10}
 17 Alumina Solution: {"Bauxite", "Water"} --> 1 --> {3}
 35 Alternate: Heavy Oil Residue: {"Crude Oil"} --> 1 --> {2}
 161 Alternate: Copper Alloy Ingot: {"Copper Ore", "Iron Ore"} --> 1 --> {3, 8, 9}
 40 Alternate: Cheap Silica: {"Limestone", "Raw Quartz"} --> 1 --> {3, 6}
 26 Alternate: Iron Alloy Ingot: {"Copper Ore", "Iron Ore"} --> 1 --> {2, 4}
+Group
+└── 23 Time Crystal: {"Alternate: Oil-Based Diamonds"} --> ... --> {7, 8}
+    └── 7 Alternate: Oil-Based Diamonds: {"Crude Oil"} --> ... --> {1}
 ~~~ LAYER 2 ~~~
 8 Petroleum Coke: {"Alternate: Heavy Oil Residue"} --> 2 --> {3}
 21 3/5 Alternate: Diluted Fuel: {"Alternate: Heavy Oil Residue", "Water"} --> 2 --> {3, 8}
@@ -95,67 +78,82 @@ Component: ["Alternate: Turbo Electric Motor", "Alternate: Heat Exchanger", "Alt
 ~~~ LAYER 3 ~~~
 21 Alternate: Steel Rod: {"Alternate: Solid Steel Ingot"} --> 3 --> {4, 5}
 47 Steel Pipe: {"Alternate: Solid Steel Ingot"} --> 3 --> {4, 7}
-34 Alternate: Recycled Rubber: {"Alternate: Diluted Fuel", "Alternate: Recycled Plastic"} --> 3 --> {3, 5, 7, 8, 10}
-36 Aluminum Ingot: {"Alternate: Cheap Silica", "Alternate: Electrode Aluminum Scrap", "Alumina Solution"} --> 3 --> {4, 8}
-11 Alternate: Electrode Aluminum Scrap: {"Alumina Solution", "Petroleum Coke"} --> 3 --> {3}
-15 Alternate: Tempered Caterium Ingot: {"Caterium Ore", "Petroleum Coke"} --> 3 --> {3}
-44 Alternate: Fused Quickwire: {"Alternate: Copper Alloy Ingot", "Alternate: Tempered Caterium Ingot"} --> 3 --> {4, 5, 6}
-33 Alternate: Recycled Plastic: {"Alternate: Diluted Fuel", "Alternate: Recycled Rubber"} --> 3 --> {3, 4, 6, 7}
+Cyclic Group
+├── 34 Alternate: Recycled Rubber: {"Alternate: Diluted Fuel", "Alternate: Recycled Plastic"} --> ... --> {3, 5, 7, 8, 10}
+└── 33 Alternate: Recycled Plastic: {"Alternate: Diluted Fuel", "Alternate: Recycled Rubber"} --> ... --> {3, 4, 6, 7}
+Group
+└── 36 Aluminum Ingot: {"Alternate: Cheap Silica", "Alternate: Electrode Aluminum Scrap", "Alumina Solution"} --> ... --> {4, 8}
+    └── 11 Alternate: Electrode Aluminum Scrap: {"Alumina Solution", "Petroleum Coke"} --> ... --> {3}
+Group
+└── 44 Alternate: Fused Quickwire: {"Alternate: Copper Alloy Ingot", "Alternate: Tempered Caterium Ingot"} --> ... --> {4, 5, 6}
+    └── 15 Alternate: Tempered Caterium Ingot: {"Caterium Ore", "Petroleum Coke"} --> ... --> {3}
 ~~~ LAYER 4 ~~~
-9 Ficsite Trigon: {"Ficsite Ingot (Aluminum)"} --> 4 --> {7, 9}
-3 Ficsite Ingot (Aluminum): {"Aluminum Ingot", "Reanimated SAM"} --> 4 --> {4}
 10 Aluminum Casing: {"Aluminum Ingot"} --> 4 --> {6, 10}
 13 Stator: {"Alternate: Iron Wire", "Steel Pipe"} --> 4 --> {5, 8}
 8 Alternate: Coated Iron Plate: {"Alternate: Iron Alloy Ingot", "Alternate: Recycled Plastic"} --> 4 --> {5, 8, 10}
 9 Alternate: Plastic AI Limiter: {"Alternate: Fused Quickwire", "Alternate: Recycled Plastic"} --> 4 --> {5, 6}
 36 Alternate: Caterium Circuit Board: {"Alternate: Fused Quickwire", "Alternate: Recycled Plastic"} --> 4 --> {5, 6, 8}
 76 Screw: {"Alternate: Steel Rod"} --> 4 --> {5, 6}
+Group
+└── 9 Ficsite Trigon: {"Ficsite Ingot (Aluminum)"} --> ... --> {7, 9}
+    └── 3 Ficsite Ingot (Aluminum): {"Aluminum Ingot", "Reanimated SAM"} --> ... --> {4}
 ~~~ LAYER 5 ~~~
 12 Rotor: {"Alternate: Steel Rod", "Screw"} --> 5 --> {6, 7, 10}
 28 Alternate: Adhered Iron Plate: {"Alternate: Coated Iron Plate", "Alternate: Recycled Rubber"} --> 5 --> {6, 7}
 6 Electromagnetic Control Rod: {"Alternate: Plastic AI Limiter", "Stator"} --> 5 --> {6, 8, 10}
-6 Alternate: Fused Quartz Crystal: {"Coal", "Raw Quartz"} --> 5 --> {5}
-17 Alternate: Insulated Crystal Oscillator: {"Alternate: Fused Quartz Crystal", "Alternate: Plastic AI Limiter", "Alternate: Recycled Rubber"} --> 5 --> {6, 8}
 18 Alternate: Caterium Computer: {"Alternate: Caterium Circuit Board", "Alternate: Fused Quickwire", "Alternate: Recycled Rubber"} --> 5 --> {6, 8}
+Group
+└── 17 Alternate: Insulated Crystal Oscillator: {"Alternate: Fused Quartz Crystal", "Alternate: Plastic AI Limiter", "Alternate: Recycled Rubber"} --> ... --> {6, 8}
+    └── 6 Alternate: Fused Quartz Crystal: {"Coal", "Raw Quartz"} --> ... --> {5}
 ~~~ LAYER 6 ~~~
 13 Alternate: Bolted Frame: {"Alternate: Adhered Iron Plate", "Screw"} --> 6 --> {7}
-3 Supercomputer: {"Alternate: Caterium Computer", "Alternate: Plastic AI Limiter", "Alternate: Recycled Plastic", "Alternate: Silicon High-Speed Connector"} --> 6 --> {7, 9}
 13 Radio Control Unit: {"Alternate: Caterium Computer", "Alternate: Insulated Crystal Oscillator", "Aluminum Casing"} --> 6 --> {9, 10}
 4 Alternate: Electric Motor: {"Electromagnetic Control Rod", "Rotor"} --> 6 --> {7, 10}
-6 Alternate: Silicon High-Speed Connector: {"Alternate: Caterium Circuit Board", "Alternate: Cheap Silica", "Alternate: Fused Quickwire"} --> 6 --> {6}
+Group
+└── 3 Supercomputer: {"Alternate: Caterium Computer", "Alternate: Plastic AI Limiter", "Alternate: Recycled Plastic", "Alternate: Silicon High-Speed Connector"} --> ... --> {7, 9}
+    └── 6 Alternate: Silicon High-Speed Connector: {"Alternate: Caterium Circuit Board", "Alternate: Cheap Silica", "Alternate: Fused Quickwire"} --> ... --> {6}
 ~~~ LAYER 7 ~~~
 1 Neural-Quantum Processor: {"Excited Photonic Matter", "Ficsite Trigon", "Supercomputer", "Time Crystal"} --> 7 --> {8}
-2 Steel Beam: {"Alternate: Solid Steel Ingot"} --> 7 --> {7}
-1 Versatile Framework: {"Alternate: Bolted Frame", "Steel Beam"} --> 7 --> {8}
-3 Alternate: Plastic Smart Plating: {"Alternate: Adhered Iron Plate", "Alternate: Recycled Plastic", "Rotor"} --> 7 --> {7}
-7 Modular Engine: {"Alternate: Electric Motor", "Alternate: Plastic Smart Plating", "Alternate: Recycled Rubber"} --> 7 --> {10}
-19 Alternate: Encased Industrial Pipe: {"Alternate: Wet Concrete", "Steel Pipe"} --> 7 --> {7}
-8 Alternate: Heavy Encased Frame: {"Alternate: Bolted Frame", "Alternate: Encased Industrial Pipe", "Alternate: Wet Concrete", "Steel Pipe"} --> 7 --> {8}
+Group
+└── 1 Versatile Framework: {"Alternate: Bolted Frame", "Steel Beam"} --> ... --> {8}
+    └── 2 Steel Beam: {"Alternate: Solid Steel Ingot"} --> ... --> {7}
+Group
+└── 8 Alternate: Heavy Encased Frame: {"Alternate: Bolted Frame", "Alternate: Encased Industrial Pipe", "Alternate: Wet Concrete", "Steel Pipe"} --> ... --> {8}
+    └── 19 Alternate: Encased Industrial Pipe: {"Alternate: Wet Concrete", "Steel Pipe"} --> ... --> {7}
+Group
+└── 7 Modular Engine: {"Alternate: Electric Motor", "Alternate: Plastic Smart Plating", "Alternate: Recycled Rubber"} --> ... --> {10}
+    └── 3 Alternate: Plastic Smart Plating: {"Alternate: Adhered Iron Plate", "Alternate: Recycled Plastic", "Rotor"} --> ... --> {7}
 ~~~ LAYER 8 ~~~
-2 Magnetic Field Generator: {"Electromagnetic Control Rod", "Versatile Framework"} --> 8 --> {8}
-1/2 AI Expansion Server: {"Excited Photonic Matter", "Magnetic Field Generator", "Neural-Quantum Processor", "Superposition Oscillator"} --> 8 --> {8, 11}
-1 Dark Matter Residue: {"Reanimated SAM"} --> 8 --> {8}
-3 Superposition Oscillator: {"Alclad Aluminum Sheet", "Alternate: Dark Matter Trap", "Alternate: Insulated Crystal Oscillator", "Excited Photonic Matter"} --> 8 --> {8, 10}
-4 Alternate: Dark Matter Trap: {"AI Expansion Server", "Dark Matter Residue", "Neural-Quantum Processor", "Superposition Oscillator", "Time Crystal"} --> 8 --> {8, 10}
-5 Alclad Aluminum Sheet: {"Alternate: Copper Alloy Ingot", "Aluminum Ingot"} --> 8 --> {8}
-10 Automated Wiring: {"Alternate: Insulated Cable", "Stator"} --> 8 --> {8}
-5 Adaptive Control Unit: {"Alternate: Caterium Circuit Board", "Alternate: Caterium Computer", "Alternate: Heavy Encased Frame", "Automated Wiring"} --> 8 --> {9}
-4 Nitric Acid: {"Alternate: Coated Iron Plate", "Nitrogen Gas", "Water"} --> 8 --> {8}
-5 Alternate: Heat-Fused Frame: {"Alternate: Diluted Fuel", "Alternate: Heavy Encased Frame", "Aluminum Ingot", "Nitric Acid"} --> 8 --> {9, 10}
-5 Alternate: Insulated Cable: {"Alternate: Iron Wire", "Alternate: Recycled Rubber"} --> 8 --> {8}
+Group
+└── 5 Alternate: Heat-Fused Frame: {"Alternate: Diluted Fuel", "Alternate: Heavy Encased Frame", "Aluminum Ingot", "Nitric Acid"} --> ... --> {9, 10}
+    └── 4 Nitric Acid: {"Alternate: Coated Iron Plate", "Nitrogen Gas", "Water"} --> ... --> {8}
+Group
+└── 5 Adaptive Control Unit: {"Alternate: Caterium Circuit Board", "Alternate: Caterium Computer", "Alternate: Heavy Encased Frame", "Automated Wiring"} --> ... --> {9}
+    └── 10 Automated Wiring: {"Alternate: Insulated Cable", "Stator"} --> ... --> {8}
+        └── 5 Alternate: Insulated Cable: {"Alternate: Iron Wire", "Alternate: Recycled Rubber"} --> ... --> {8}
+Cyclic Group
+├── 2 Magnetic Field Generator: {"Electromagnetic Control Rod", "Versatile Framework"} --> ... --> {8}
+├── 1/2 AI Expansion Server: {"Excited Photonic Matter", "Magnetic Field Generator", "Neural-Quantum Processor", "Superposition Oscillator"} --> ... --> {8, 11}
+├── 1 Dark Matter Residue: {"Reanimated SAM"} --> ... --> {8}
+├── 3 Superposition Oscillator: {"Alclad Aluminum Sheet", "Alternate: Dark Matter Trap", "Alternate: Insulated Crystal Oscillator", "Excited Photonic Matter"} --> ... --> {8, 10}
+├── 4 Alternate: Dark Matter Trap: {"AI Expansion Server", "Dark Matter Residue", "Neural-Quantum Processor", "Superposition Oscillator", "Time Crystal"} --> ... --> {8, 10}
+└── 5 Alclad Aluminum Sheet: {"Alternate: Copper Alloy Ingot", "Aluminum Ingot"} --> ... --> {8}
 ~~~ LAYER 9 ~~~
-3 1/3 Assembly Director System: {"Adaptive Control Unit", "Supercomputer"} --> 9 --> {9}
-24 Nuclear Pasta: {"Copper Powder", "Pressure Conversion Cube"} --> 9 --> {10, 11}
-5 Biochemical Sculptor: {"Assembly Director System", "Ficsite Trigon", "Water"} --> 9 --> {11}
-12 Pressure Conversion Cube: {"Alternate: Heat-Fused Frame", "Radio Control Unit"} --> 9 --> {9}
-48 Copper Powder: {"Alternate: Copper Alloy Ingot"} --> 9 --> {9}
+Group
+└── 24 Nuclear Pasta: {"Copper Powder", "Pressure Conversion Cube"} --> ... --> {10, 11}
+    ├── 48 Copper Powder: {"Alternate: Copper Alloy Ingot"} --> ... --> {9}
+    └── 12 Pressure Conversion Cube: {"Alternate: Heat-Fused Frame", "Radio Control Unit"} --> ... --> {9}
+Group
+└── 5 Biochemical Sculptor: {"Assembly Director System", "Ficsite Trigon", "Water"} --> ... --> {11}
+    └── 3 1/3 Assembly Director System: {"Adaptive Control Unit", "Supercomputer"} --> ... --> {9}
 ~~~ LAYER 10 ~~~
-2 1/2 Thermal Propulsion Rocket: {"Alternate: Cooling Device", "Alternate: Heat-Fused Frame", "Alternate: Turbo Electric Motor", "Modular Engine"} --> 10 --> {10}
-2 1/2 Ballistic Warp Drive: {"Alternate: Dark Matter Trap", "Singularity Cell", "Superposition Oscillator", "Thermal Propulsion Rocket"} --> 10 --> {11}
-2 Alternate: Cooling Device: {"Alternate: Electric Motor", "Alternate: Heat Exchanger", "Nitrogen Gas"} --> 10 --> {10}
-1 Alternate: Turbo Electric Motor: {"Alternate: Electric Motor", "Electromagnetic Control Rod", "Radio Control Unit", "Rotor"} --> 10 --> {10}
-2 Alternate: Heat Exchanger: {"Alternate: Recycled Rubber", "Aluminum Casing"} --> 10 --> {10}
-2 Singularity Cell: {"Alternate: Coated Iron Plate", "Alternate: Dark Matter Trap", "Alternate: Wet Concrete", "Nuclear Pasta"} --> 10 --> {10}
+Group
+└── 2 1/2 Ballistic Warp Drive: {"Alternate: Dark Matter Trap", "Singularity Cell", "Superposition Oscillator", "Thermal Propulsion Rocket"} --> ... --> {11}
+    ├── 2 Singularity Cell: {"Alternate: Coated Iron Plate", "Alternate: Dark Matter Trap", "Alternate: Wet Concrete", "Nuclear Pasta"} --> ... --> {10}
+    └── 2 1/2 Thermal Propulsion Rocket: {"Alternate: Cooling Device", "Alternate: Heat-Fused Frame", "Alternate: Turbo Electric Motor", "Modular Engine"} --> ... --> {10}
+        ├── 1 Alternate: Turbo Electric Motor: {"Alternate: Electric Motor", "Electromagnetic Control Rod", "Radio Control Unit", "Rotor"} --> ... --> {10}
+        └── 2 Alternate: Cooling Device: {"Alternate: Electric Motor", "Alternate: Heat Exchanger", "Nitrogen Gas"} --> ... --> {10}
+            └── 2 Alternate: Heat Exchanger: {"Alternate: Recycled Rubber", "Aluminum Casing"} --> ... --> {10}
 ~~~ LAYER 11 ~~~
 0 output: {"AI Expansion Server", "Ballistic Warp Drive", "Biochemical Sculptor", "Nuclear Pasta"} --> 11 --> {}
 flowchart TD
@@ -174,15 +172,17 @@ flowchart TD
     81[960 SAM]
   end
   subgraph L1
-    13[23 Time Crystal]
     14[8 Reanimated SAM]
-    17[7 Alternate: Oil-Based Diamonds]
     19[12 Alternate: Wet Concrete]
     27[17 Alumina Solution]
     32[35 Alternate: Heavy Oil Residue]
     37[161 Alternate: Copper Alloy Ingot]
     56[40 Alternate: Cheap Silica]
     61[26 Alternate: Iron Alloy Ingot]
+  end
+  subgraph L1
+    13[23 Time Crystal]
+    17[7 Alternate: Oil-Based Diamonds]
   end
   subgraph L2
     16[8 Petroleum Coke]
@@ -193,16 +193,20 @@ flowchart TD
   subgraph L3
     20[21 Alternate: Steel Rod]
     22[47 Steel Pipe]
+  end
+  subgraph L3
     24[34 Alternate: Recycled Rubber]
-    28[36 Aluminum Ingot]
-    35[11 Alternate: Electrode Aluminum Scrap]
-    53[15 Alternate: Tempered Caterium Ingot]
-    58[44 Alternate: Fused Quickwire]
     59[33 Alternate: Recycled Plastic]
   end
+  subgraph L3
+    28[36 Aluminum Ingot]
+    35[11 Alternate: Electrode Aluminum Scrap]
+  end
+  subgraph L3
+    53[15 Alternate: Tempered Caterium Ingot]
+    58[44 Alternate: Fused Quickwire]
+  end
   subgraph L4
-    12[9 Ficsite Trigon]
-    15[3 Ficsite Ingot (Aluminum)]
     25[10 Aluminum Casing]
     30[13 Stator]
     38[8 Alternate: Coated Iron Plate]
@@ -210,29 +214,52 @@ flowchart TD
     67[36 Alternate: Caterium Circuit Board]
     70[76 Screw]
   end
+  subgraph L4
+    12[9 Ficsite Trigon]
+    15[3 Ficsite Ingot (Aluminum)]
+  end
   subgraph L5
     36[12 Rotor]
     40[28 Alternate: Adhered Iron Plate]
     46[6 Electromagnetic Control Rod]
+    66[18 Alternate: Caterium Computer]
+  end
+  subgraph L5
     52[6 Alternate: Fused Quartz Crystal]
     65[17 Alternate: Insulated Crystal Oscillator]
-    66[18 Alternate: Caterium Computer]
   end
   subgraph L6
     39[13 Alternate: Bolted Frame]
-    44[3 Supercomputer]
     45[13 Radio Control Unit]
     48[4 Alternate: Electric Motor]
+  end
+  subgraph L6
+    44[3 Supercomputer]
     62[6 Alternate: Silicon High-Speed Connector]
   end
   subgraph L7
     11[1 Neural-Quantum Processor]
+  end
+  subgraph L7
     21[2 Steel Beam]
     23[1 Versatile Framework]
-    29[3 Alternate: Plastic Smart Plating]
-    33[7 Modular Engine]
+  end
+  subgraph L7
     57[19 Alternate: Encased Industrial Pipe]
     63[8 Alternate: Heavy Encased Frame]
+  end
+  subgraph L7
+    29[3 Alternate: Plastic Smart Plating]
+    33[7 Modular Engine]
+  end
+  subgraph L8
+    42[4 Nitric Acid]
+    47[5 Alternate: Heat-Fused Frame]
+  end
+  subgraph L8
+    31[10 Automated Wiring]
+    34[5 Adaptive Control Unit]
+    68[5 Alternate: Insulated Cable]
   end
   subgraph L8
     1[2 Magnetic Field Generator]
@@ -241,18 +268,15 @@ flowchart TD
     10[3 Superposition Oscillator]
     18[4 Alternate: Dark Matter Trap]
     26[5 Alclad Aluminum Sheet]
-    31[10 Automated Wiring]
-    34[5 Adaptive Control Unit]
-    42[4 Nitric Acid]
-    47[5 Alternate: Heat-Fused Frame]
-    68[5 Alternate: Insulated Cable]
+  end
+  subgraph L9
+    4[24 Nuclear Pasta]
+    41[12 Pressure Conversion Cube]
+    43[48 Copper Powder]
   end
   subgraph L9
     2[3 1/3 Assembly Director System]
-    4[24 Nuclear Pasta]
     5[5 Biochemical Sculptor]
-    41[12 Pressure Conversion Cube]
-    43[48 Copper Powder]
   end
   subgraph L10
     3[2 1/2 Thermal Propulsion Rocket]

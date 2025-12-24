@@ -432,15 +432,49 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     tree.leaves.iter().map(|l| tree_len(l)).sum::<usize>() + 1
                 }
 
-                let tree = tree(
-                    local_root,
-                    &ranks,
-                    &local_nodes,
-                    &graph,
-                    &local,
-                    &mut BTreeSet::new(),
-                );
-                assert_eq!(tree_len(&tree), component_nodes.len() + 1);
+                let tree = if petgraph::algo::is_cyclic_directed(&local) {
+                    let mut root = Tree::new("Cyclic Group".to_string());
+                    for local_node in local.node_indices() {
+                        let local_node = LocalNodeIndex(local_node);
+                        if local_node == local_root {
+                            continue;
+                        }
+                        let GlobalNodeIndex::Node(node) =
+                            *local_nodes.get_by_right(&local_node).unwrap()
+                        else {
+                            unreachable!()
+                        };
+
+                        let (amount, name) = graph.node_weight(node).unwrap();
+                        let incoming = graph
+                            .edges_directed(node, Direction::Incoming)
+                            .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                            .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
+                            .collect::<BTreeSet<_>>();
+                        let outgoing = graph
+                            .edges_directed(node, Direction::Outgoing)
+                            .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                            .map(|edge| ranks.get(&edge.target()).unwrap().rank)
+                            .collect::<BTreeSet<_>>();
+                        let s = format!(
+                            "{} {}: {:?} --> ... --> {:?}",
+                            amount, name, incoming, outgoing
+                        );
+                        root.push(Tree::new(s));
+                    }
+                    root
+                } else {
+                    let tree = tree(
+                        local_root,
+                        &ranks,
+                        &local_nodes,
+                        &graph,
+                        &local,
+                        &mut BTreeSet::new(),
+                    );
+                    assert_eq!(tree_len(&tree), component_nodes.len() + 1);
+                    tree
+                };
                 print!("{tree}");
             }
         }
@@ -485,7 +519,7 @@ fn deduce_ranks(graph: &ProductionGraph) -> BTreeMap<NodeIndex, Rank> {
             .iter()
             .map(|i| &graph.node_weight(*i).unwrap().1)
             .collect::<Vec<_>>();
-        println!("Component: {component_nodes:?}");
+        // println!("Component: {component_nodes:?}");
 
         let max_component_parent = component
             .iter()

@@ -13,8 +13,8 @@
     "Desc_OreUranium_C": 2100,
 //    "Desc_OreUranium_C": 0.05,
     "Desc_Stone_C": 69900,
-//    "Desc_LiquidOil_C": 12600,
-    "Desc_LiquidOil_C": 0.05,
+    "Desc_LiquidOil_C": 12600,
+//    "Desc_LiquidOil_C": 0.05,
     "Desc_OreCopper_C": 36900,
     "Desc_SAM_C": 10200
   },
@@ -24,13 +24,13 @@
     "Resources Scaled": 1,
     "Nuclear Waste": 9999999,
 
-//    "Power Use": 0.1,
-//    "Item Use": 0,
-//    "Buildings Scaled": 0,
+    "Power Use": 0.1,
+    "Item Use": 0,
+    "Buildings Scaled": 0,
 
-    "Power Use": 0.3,
-    "Item Use": 0.4,
-    "Buildings Scaled": 30,
+//    "Power Use": 0.3,
+//    "Item Use": 0.4,
+//    "Buildings Scaled": 30,
   },
   "recipes_off": [
     "Recipe_Biomass_Mycelia_C",
@@ -61,7 +61,7 @@
     "Recipe_SpaceElevatorPart_12_C",
   ],
   "inputs": {
-    "Desc_NuclearWaste_C": 150,
+//    "Desc_NuclearWaste_C": 150,
   },
   "outputs": {
 //    "Desc_SpaceElevatorPart_6_C": 5,
@@ -69,13 +69,13 @@
 //    "Desc_SpaceElevatorPart_8_C": 2.5,
 //    "Desc_SpaceElevatorPart_9_C": 1,
 
-//    "Desc_SpaceElevatorPart_9_C": 10,
-//    "Desc_SpaceElevatorPart_10_C": 10,
-//    "Desc_SpaceElevatorPart_11_C": 2.5,
-//    "Desc_SpaceElevatorPart_12_C": 2,
+    "Desc_SpaceElevatorPart_9_C": 10,
+    "Desc_SpaceElevatorPart_10_C": 10,
+    "Desc_SpaceElevatorPart_11_C": 2.5,
+    "Desc_SpaceElevatorPart_12_C": 2,
 
-    "Desc_NuclearFuelRod_C": 3,
-    "Desc_PlutoniumFuelRod_C": 4,
+//    "Desc_NuclearFuelRod_C": 3,
+//    "Desc_PlutoniumFuelRod_C": 4,
   },
   "extras": {},
   "max_item": false,
