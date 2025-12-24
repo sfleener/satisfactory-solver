@@ -11,7 +11,7 @@ use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::visit::{Bfs, EdgeRef, IntoEdgesDirected, Topo, Walker, WalkerIter};
 use petgraph::{Direction, EdgeDirection};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use termtree::Tree;
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
@@ -322,7 +322,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     let outgoing = graph
                         .edges_directed(node, Direction::Outgoing)
                         .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                        .map(|edge| *ranks.get(&edge.target()).unwrap())
+                        .map(|edge| ranks.get(&edge.target()).unwrap().rank)
                         .collect::<BTreeSet<_>>();
                     println!(
                         "{} {}: {:?} --> {} --> {:?}",
@@ -331,82 +331,117 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 }
             } else {
                 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-                struct GlobalNodeIndex(NodeIndex);
+                enum GlobalNodeIndex {
+                    Node(NodeIndex),
+                    Root,
+                }
+                impl GlobalNodeIndex {
+                    fn id(self) -> NodeIndex {
+                        let Self::Node(id) = self else { panic!() };
+                        id
+                    }
+                }
                 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
                 struct LocalNodeIndex(NodeIndex);
 
                 let component_nodes = component
                     .into_iter()
-                    .map(|(i, _)| GlobalNodeIndex(*i))
+                    .map(|(i, _)| GlobalNodeIndex::Node(*i))
                     .collect::<Vec<_>>();
+                // println!(
+                //     ">>>>>>{:?}",
+                //     component_nodes
+                //         .iter()
+                //         .map(|i| graph.node_weight(i.id()).unwrap().1.clone())
+                //         .collect::<Vec<_>>()
+                // );
 
                 let mut local = DiGraph::<GlobalNodeIndex, ()>::new();
-                let local_nodes = BiBTreeMap::from_iter(
+                let local_root = LocalNodeIndex(local.add_node(GlobalNodeIndex::Root));
+                let mut local_nodes = BiBTreeMap::from_iter(
                     component_nodes
                         .iter()
                         .copied()
                         .map(|i| (i, LocalNodeIndex(local.add_node(i)))),
                 );
+                local_nodes.insert(GlobalNodeIndex::Root, local_root);
                 for &id in &component_nodes {
+                    let local_id = local_nodes.get_by_left(&id).unwrap();
+                    let mut has_outgoing = false;
                     for edge in graph
-                        .edges_directed(id.0, Direction::Outgoing)
+                        .edges_directed(id.id(), Direction::Outgoing)
                         .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
                     {
-                        if local.node_weight(edge.target()).is_none()
-                            || local.node_weight(id.0).is_none()
-                        {
+                        let Some(target) =
+                            local_nodes.get_by_left(&GlobalNodeIndex::Node(edge.target()))
+                        else {
                             continue;
                         };
-                        local.add_edge(edge.target(), id.0, ());
+                        local.add_edge(target.0, local_id.0, ());
+                        has_outgoing = true;
+                    }
+
+                    if !has_outgoing {
+                        local.add_edge(local_root.0, local_id.0, ());
                     }
                 }
 
                 fn tree<'a>(
-                    node: GlobalNodeIndex,
+                    local_node: LocalNodeIndex,
                     ranks: &BTreeMap<NodeIndex, Rank>,
                     local_nodes: &BiBTreeMap<GlobalNodeIndex, LocalNodeIndex>,
                     graph: &'a ProductionGraph,
+                    local_graph: &DiGraph<GlobalNodeIndex, ()>,
+                    visited: &mut BTreeSet<LocalNodeIndex>,
                 ) -> Tree<String> {
-                    let (amount, name) = graph.node_weight(node.0).unwrap();
-                    let incoming = graph
-                        .edges_directed(node.0, Direction::Incoming)
-                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                        .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
-                        .collect::<BTreeSet<_>>();
-                    let outgoing = graph
-                        .edges_directed(node.0, Direction::Outgoing)
-                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                        .map(|edge| ranks.get(&edge.target()).unwrap().rank)
-                        .collect::<BTreeSet<_>>();
-                    let s = format!(
-                        "{} {}: {:?} --> ... --> {:?}",
-                        amount, name, incoming, outgoing
-                    );
-                    // let mut t = Tree::new(graph.node_weight(node.0).unwrap().1.as_str());
+                    let global_node = *local_nodes.get_by_right(&local_node).unwrap();
+                    let s = match global_node {
+                        GlobalNodeIndex::Node(node) => {
+                            let (amount, name) = graph.node_weight(node).unwrap();
+                            let incoming = graph
+                                .edges_directed(node, Direction::Incoming)
+                                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                                .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
+                                .collect::<BTreeSet<_>>();
+                            let outgoing = graph
+                                .edges_directed(node, Direction::Outgoing)
+                                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                                .map(|edge| ranks.get(&edge.target()).unwrap().rank)
+                                .collect::<BTreeSet<_>>();
+                            format!(
+                                "{} {}: {:?} --> ... --> {:?}",
+                                amount, name, incoming, outgoing
+                            )
+                        }
+                        GlobalNodeIndex::Root => "Group".to_string(),
+                    };
+
                     let mut t = Tree::new(s);
-                    for edge in graph
-                        .edges_directed(node.0, Direction::Incoming)
-                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                    {
-                        let g = GlobalNodeIndex(edge.source());
-                        if !local_nodes.contains_left(&g) {
+                    for edge in local_graph.edges_directed(local_node.0, Direction::Outgoing) {
+                        let new = LocalNodeIndex(edge.target());
+                        if visited.contains(&new) {
                             continue;
                         }
-                        t.push(tree(g, ranks, local_nodes, graph));
+                        visited.insert(new);
+                        t.push(tree(new, ranks, local_nodes, graph, local_graph, visited));
                     }
                     t
                 }
 
-                let root = LocalNodeIndex(Topo::new(&local).next(&local).unwrap());
-                print!(
-                    "{}",
-                    tree(
-                        *local_nodes.get_by_right(&root).unwrap(),
-                        &ranks,
-                        &local_nodes,
-                        &graph
-                    )
+                fn tree_len<T: Display>(tree: &Tree<T>) -> usize {
+                    tree.leaves.iter().map(|l| tree_len(l)).sum::<usize>() + 1
+                }
+
+                let tree = tree(
+                    local_root,
+                    &ranks,
+                    &local_nodes,
+                    &graph,
+                    &local,
+                    &mut BTreeSet::new(),
                 );
+                assert_eq!(tree_len(&tree), component_nodes.len() + 1);
+                print!("{tree}");
             }
         }
     }
