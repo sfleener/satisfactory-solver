@@ -1,49 +1,32 @@
-use crate::data::{Data, ItemKey, RecipeKey, Settings};
+use crate::data::{Data, ItemKey, Name, Recipe, RecipeKey, Settings};
 use crate::rational::units::Recipes;
 use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
 use crate::solver::SolutionValues;
 use assertables::{assert_ge, assert_le};
 use bimap::BiBTreeMap;
 use itertools::Itertools;
+use petgraph::Direction;
 use petgraph::data::DataMap;
 use petgraph::dot::Dot;
-use petgraph::graph::{DiGraph, NodeIndex};
-use petgraph::visit::{Bfs, EdgeRef, IntoEdgesDirected, Topo, Walker, WalkerIter};
-use petgraph::{Direction, EdgeDirection};
+use petgraph::graph::{DiGraph, EdgeIndex, NodeIndex};
+use petgraph::visit::{EdgeRef, IntoEdgesDirected, Walker};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{Debug, Display, Formatter};
+use std::sync::Arc;
 use termtree::Tree;
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     let mut graph = ProductionGraph::new();
-    let output_node = graph.add_node((Rat::ZERO, "output".to_string()));
-    let mut recipe_nodes = BTreeMap::new();
     let mut resource_nodes = BTreeMap::new();
-    let mut input_nodes = BTreeMap::new();
 
-    for (recipe_key, &(_, recipe_val)) in &values.recipes_used {
-        let recipe = &data.recipes[recipe_key];
-        let node = graph.add_node((recipe_val, recipe.name.clone()));
+    let recipe_nodes = graph.add_recipe_nodes(data, values);
+    let input_nodes = graph.add_input_nodes(values);
 
-        recipe_nodes.insert(recipe_key, (node, recipe.clone(), recipe_val));
-    }
-
-    for (k, (name, v)) in &values.items_input {
-        let node = graph.add_node((*v / ItemsPerMinutePerRecipe::ONE, name.clone()));
-        input_nodes.insert(*k, node);
-    }
-
-    let mut needs = VecDeque::new();
-    for (k, mut v) in &settings.outputs {
-        if v.is_near_zero() {
-            let (_, a) = &values.items_output[k];
-            v = a;
-        }
-        needs.push_back((*k, (output_node, *v)));
-    }
+    let mut needs = graph.add_base_needs(settings, values);
 
     let mut provides_recipes: BTreeMap<_, BTreeMap<_, _>> = BTreeMap::new();
-    for (k, (_, _, v)) in &recipe_nodes {
+    for (k, RecipeNode { amount: v, .. }) in &recipe_nodes {
         let recipe = &data.recipes[k];
         for product in &recipe.products {
             let amount_per_recipe = product.amount;
@@ -57,9 +40,13 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
         for ingredient in &recipe.ingredients {
             let amount_per_recipe = ingredient.amount;
-            let amount = amount_per_recipe * *v;
-            println!("Adding {k} needs {amount:?} {}", ingredient.item);
-            needs.push_back((ingredient.item, (recipe_nodes[k].0, amount)));
+            let rate = amount_per_recipe * *v;
+            println!("Adding {k} needs {rate:?} {}", ingredient.item);
+            needs.push_back(NeedsEntry {
+                item: ingredient.item,
+                node: recipe_nodes[k].node,
+                rate,
+            });
         }
     }
 
@@ -72,9 +59,14 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
     let mut needs_resources: BTreeMap<_, Vec<_>> = BTreeMap::new();
 
-    while let Some((needs_key, (needs_node, mut needs_amount))) = needs.pop_front() {
+    while let Some(NeedsEntry {
+        item: needs_key,
+        node: needs_node,
+        rate: mut needs_rate,
+    }) = needs.pop_front()
+    {
         println!(
-            "checking {:?} needs {needs_amount:?} of {needs_key}",
+            "checking {:?} needs {needs_rate:?} of {needs_key}",
             graph.node_weight(needs_node)
         );
         if data.resources.contains_key(&needs_key) {
@@ -82,29 +74,25 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             needs_resources
                 .entry(needs_key)
                 .or_default()
-                .push((needs_node, needs_amount));
+                .push((needs_node, needs_rate));
             continue;
         }
 
         assert!(
-            !needs_amount.is_near_zero(),
-            "Non-zero needs remaining: {needs_amount:?}"
+            !needs_rate.is_near_zero(),
+            "Non-zero needs remaining: {needs_rate:?}"
         );
         if let Some((provides_node, provides_amount)) = provides_inputs.get_mut(&needs_key)
             && !provides_amount.is_near_zero()
         {
-            let edge = if let Some(e) = graph.find_edge(*provides_node, needs_node) {
-                e
-            } else {
-                graph.add_edge(
-                    *provides_node,
-                    needs_node,
-                    BeltKind::Items {
-                        item: needs_key,
-                        rate: Rat::ZERO,
-                    },
-                )
-            };
+            let edge = graph.get_or_insert_edge(
+                *provides_node,
+                needs_node,
+                BeltKind::Items {
+                    item: needs_key,
+                    rate: Rat::ZERO,
+                },
+            );
 
             let BeltKind::Items {
                 item: _,
@@ -114,28 +102,28 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 unreachable!()
             };
 
-            let difference = if *provides_amount >= needs_amount {
-                let difference = *edge_amount + needs_amount;
-                *provides_amount = *provides_amount - needs_amount;
-                needs_amount = Rat::ZERO;
+            let difference = if *provides_amount >= needs_rate {
+                let difference = *edge_amount + needs_rate;
+                *provides_amount = *provides_amount - needs_rate;
+                needs_rate = Rat::ZERO;
                 difference
             } else {
                 let difference = *edge_amount + *provides_amount;
-                needs_amount = needs_amount - *provides_amount;
+                needs_rate = needs_rate - *provides_amount;
                 *provides_amount = Rat::ZERO;
                 difference
             };
 
             *edge_amount += difference;
 
-            if needs_amount.is_near_zero() {
+            if needs_rate.is_near_zero() {
                 continue;
             }
         }
 
         let Some(provides) = provides_recipes.get_mut(&needs_key) else {
             panic!(
-                "No recipes remaining that provide {needs_amount:?} {needs_key}: {provides_recipes:?}\n{:?}",
+                "No recipes remaining that provide {needs_rate:?} {needs_key}: {provides_recipes:?}\n{:?}",
                 Dot::new(&graph)
             );
         };
@@ -145,18 +133,14 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             assert!(!provides_amount.is_near_zero());
             let (provides_node, _, _) = recipe_nodes.get(provides_key).unwrap();
 
-            let edge = if let Some(e) = graph.find_edge(*provides_node, needs_node) {
-                e
-            } else {
-                graph.add_edge(
-                    *provides_node,
-                    needs_node,
-                    BeltKind::Items {
-                        item: needs_key,
-                        rate: Rat::ZERO,
-                    },
-                )
-            };
+            let edge = graph.get_or_insert_edge(
+                *provides_node,
+                needs_node,
+                BeltKind::Items {
+                    item: needs_key,
+                    rate: Rat::ZERO,
+                },
+            );
 
             let BeltKind::Items {
                 item: _,
@@ -166,14 +150,14 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 unreachable!()
             };
 
-            let difference = if *provides_amount >= needs_amount {
-                let difference = *edge_amount + needs_amount;
-                *provides_amount = *provides_amount - needs_amount;
-                needs_amount = Rat::ZERO;
+            let difference = if *provides_amount >= needs_rate {
+                let difference = *edge_amount + needs_rate;
+                *provides_amount = *provides_amount - needs_rate;
+                needs_rate = Rat::ZERO;
                 difference
             } else {
                 let difference = *edge_amount + *provides_amount;
-                needs_amount = needs_amount - *provides_amount;
+                needs_rate = needs_rate - *provides_amount;
                 *provides_amount = Rat::ZERO;
                 difference
             };
@@ -184,7 +168,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 to_remove.push(*provides_key);
             }
 
-            if needs_amount.is_near_zero() {
+            if needs_rate.is_near_zero() {
                 break;
             }
         }
@@ -194,8 +178,8 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         if provides.is_empty() {
             provides_recipes.remove(&needs_key);
         }
-        if !needs_amount.is_near_zero() {
-            needs.push_back((needs_key, (needs_node, needs_amount.reduced())));
+        if !needs_rate.is_near_zero() {
+            needs.push_back((needs_key, (needs_node, needs_rate.reduced())));
         }
     }
 
@@ -211,10 +195,10 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             let new_value = needs_amount / ItemsPerMinutePerRecipe::ONE;
 
             let resource_node = *resource_nodes.entry(needs_key).or_insert_with(|| {
-                graph.add_node((
+                graph.add_node(
                     Rat::ZERO,
                     data.resources.get(&needs_key).unwrap().name.clone(),
-                ))
+                )
             });
             let weight = &mut graph.node_weight_mut(resource_node).unwrap().0;
             *weight = *weight + new_value;
@@ -229,6 +213,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
     }
 
+    // Dump extra resources
     if !provides_recipes.is_empty() {
         for (k, v) in &provides_recipes {
             let extra: ItemsPerMinute = v.values().map(|(_, a)| *a).sum();
@@ -241,17 +226,22 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         }
     }
 
-    let ranks = deduce_ranks(&graph);
+    let ranks = graph.deduce_ranks();
 
     {
         for node in graph.node_indices() {
-            if node == output_node {
+            if graph.is_output(node) {
                 continue;
             }
             if ranks[&node].rank == 0 {
                 continue;
             }
-            if graph.edges_directed(node, Direction::Outgoing).count() != 1 {
+            if graph
+                .edges_directed(node, Direction::Outgoing)
+                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                .count()
+                != 1
+            {
                 continue;
             }
             let target = graph
@@ -260,7 +250,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 .next()
                 .unwrap()
                 .target();
-            if target == output_node {
+            if graph.is_output(target) {
                 continue;
             }
             let node_rank = ranks.get(&node).unwrap_or_else(|| {
@@ -281,7 +271,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     }
 
     // deduce ranks a second time once inline links have been generated
-    let ranks = deduce_ranks(&graph);
+    let ranks = graph.deduce_ranks();
 
     // assert ranks are well-ordered
     for (&node, &rank) in &ranks {
@@ -330,20 +320,6 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     );
                 }
             } else {
-                #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-                enum GlobalNodeIndex {
-                    Node(NodeIndex),
-                    Root,
-                }
-                impl GlobalNodeIndex {
-                    fn id(self) -> NodeIndex {
-                        let Self::Node(id) = self else { panic!() };
-                        id
-                    }
-                }
-                #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-                struct LocalNodeIndex(NodeIndex);
-
                 let component_nodes = component
                     .into_iter()
                     .map(|(i, _)| GlobalNodeIndex::Node(*i))
@@ -356,7 +332,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 //         .collect::<Vec<_>>()
                 // );
 
-                let mut local = DiGraph::<GlobalNodeIndex, ()>::new();
+                let mut local = ComponentGraph::new();
                 let local_root = LocalNodeIndex(local.add_node(GlobalNodeIndex::Root));
                 let mut local_nodes = BiBTreeMap::from_iter(
                     component_nodes
@@ -498,62 +474,30 @@ enum BeltKind {
     InlineLink,
 }
 
-fn deduce_ranks(graph: &ProductionGraph) -> BTreeMap<NodeIndex, Rank> {
-    let mut ranks = BTreeMap::<_, Rank>::new();
-    let components = petgraph::algo::tarjan_scc(&graph);
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+enum GlobalNodeIndex {
+    Node(NodeIndex),
+    Root,
+}
+impl GlobalNodeIndex {
+    fn id(self) -> NodeIndex {
+        let Self::Node(id) = self else { panic!() };
+        id
+    }
+}
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+struct LocalNodeIndex(NodeIndex);
 
-    let mut next_component_id = 0;
-    for component in components.iter().rev() {
-        if component.is_empty() {
-            continue;
-        }
+struct ComponentGraph {
+    inner: DiGraph<GlobalNodeIndex, ()>,
+}
 
-        let component_id = if component.len() <= 1 {
-            None
-        } else {
-            let id = next_component_id;
-            next_component_id += 1;
-            Some(id)
-        };
-        let component_nodes = component
-            .iter()
-            .map(|i| &graph.node_weight(*i).unwrap().1)
-            .collect::<Vec<_>>();
-        // println!("Component: {component_nodes:?}");
-
-        let max_component_parent = component
-            .iter()
-            .flat_map(|&node| {
-                graph
-                    .edges_directed(node, Direction::Incoming)
-                    .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                    .filter_map(|edge| ranks.get(&edge.source()).copied().map(|r| r.rank))
-            })
-            .max();
-
-        if let Some(max) = max_component_parent {
-            for &node in component {
-                ranks.insert(
-                    node,
-                    Rank {
-                        rank: max + 1,
-                        component: component_id,
-                    },
-                );
-            }
-        } else {
-            for &node in component {
-                ranks.insert(
-                    node,
-                    Rank {
-                        rank: 0,
-                        component: component_id,
-                    },
-                );
-            }
+impl ComponentGraph {
+    fn new() -> Self {
+        Self {
+            inner: DiGraph::new(),
         }
     }
-    ranks
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -562,7 +506,197 @@ struct Rank {
     component: Option<u8>,
 }
 
-type ProductionGraph = DiGraph<(Rat<Recipes>, String), BeltKind>;
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+struct ProductionNodeIndex(NodeIndex);
+
+struct ProductionNode {
+    amount: Rat<Recipes>,
+    name: Name,
+}
+
+struct RecipeNode {
+    node: ProductionNodeIndex,
+    recipe: Arc<Recipe>,
+    amount: Rat<Recipes>,
+}
+
+impl RecipeNode {
+    pub fn new(node: ProductionNodeIndex, recipe: Arc<Recipe>, amount: Rat<Recipes>) -> Self {
+        Self {
+            node,
+            recipe,
+            amount,
+        }
+    }
+}
+
+struct ProductionGraph {
+    inner: DiGraph<ProductionNode, BeltKind>,
+    root: ProductionNodeIndex,
+}
+
+impl ProductionGraph {
+    fn new() -> Self {
+        let mut inner = DiGraph::new();
+        let root = ProductionNodeIndex(inner.add_node(ProductionNode {
+            amount: Rat::ZERO,
+            name: Name::new_static("output"),
+        }));
+        Self { inner, root }
+    }
+
+    fn is_output(&self, node: ProductionNodeIndex) -> bool {
+        node == self.root
+    }
+
+    fn add_node(&mut self, amount: Rat<Recipes>, name: Name) -> ProductionNodeIndex {
+        ProductionNodeIndex(self.inner.add_node(ProductionNode {
+            amount,
+            name: name.into(),
+        }))
+    }
+
+    pub fn add_recipe_nodes(
+        &mut self,
+        data: &Data,
+        values: &SolutionValues,
+    ) -> BTreeMap<RecipeKey, RecipeNode> {
+        let mut recipe_nodes = BTreeMap::new();
+        for (&recipe_key, &(_, recipe_val)) in &values.recipes_used {
+            let recipe = &data.recipes[&recipe_key];
+            let node = self.add_node(recipe_val, recipe.name.clone());
+
+            recipe_nodes.insert(
+                recipe_key,
+                RecipeNode::new(node, recipe.clone(), recipe_val),
+            );
+        }
+        recipe_nodes
+    }
+
+    pub fn add_input_nodes(
+        &mut self,
+        values: &SolutionValues,
+    ) -> BTreeMap<ItemKey, ProductionNodeIndex> {
+        let mut input_nodes = BTreeMap::new();
+        for (k, (name, v)) in &values.items_input {
+            let node = self.add_node(*v / ItemsPerMinutePerRecipe::ONE, *name);
+            input_nodes.insert(*k, node);
+        }
+        input_nodes
+    }
+
+    fn add_base_needs(
+        &mut self,
+        settings: &Settings,
+        values: &SolutionValues,
+    ) -> VecDeque<NeedsEntry> {
+        let mut needs = VecDeque::new();
+        for (k, mut v) in &settings.outputs {
+            if v.is_near_zero() {
+                let (_, a) = &values.items_output[k];
+                v = a;
+            }
+            needs.push_back(NeedsEntry {
+                item: *k,
+                node: self.root,
+                rate: *v,
+            });
+        }
+        needs
+    }
+
+    fn get_or_insert_edge(
+        &mut self,
+        src: ProductionNodeIndex,
+        dst: ProductionNodeIndex,
+        default: BeltKind,
+    ) -> EdgeIndex {
+        if let Some(e) = self.inner.find_edge(src.0, dst.0) {
+            e
+        } else {
+            self.inner.add_edge(src.0, dst.0, default)
+        }
+    }
+
+    fn get_or_insert_edge_with(
+        &mut self,
+        src: ProductionNodeIndex,
+        dst: ProductionNodeIndex,
+        default: impl FnOnce() -> BeltKind,
+    ) -> EdgeIndex {
+        if let Some(e) = self.inner.find_edge(src.0, dst.0) {
+            e
+        } else {
+            self.inner.add_edge(src.0, dst.0, default())
+        }
+    }
+
+    fn deduce_ranks(&self) -> BTreeMap<NodeIndex, Rank> {
+        let mut ranks = BTreeMap::<_, Rank>::new();
+        let components = petgraph::algo::tarjan_scc(&self.inner);
+
+        let mut next_component_id = 0;
+        for component in components.iter().rev() {
+            if component.is_empty() {
+                continue;
+            }
+
+            let component_id = if component.len() <= 1 {
+                None
+            } else {
+                let id = next_component_id;
+                next_component_id += 1;
+                Some(id)
+            };
+            let component_nodes = component
+                .iter()
+                .map(|i| &self.inner.node_weight(*i).unwrap())
+                .collect::<Vec<_>>();
+            // println!("Component: {component_nodes:?}");
+
+            let max_component_parent = component
+                .iter()
+                .flat_map(|&node| {
+                    self.inner
+                        .edges_directed(node, Direction::Incoming)
+                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                        .filter_map(|edge| ranks.get(&edge.source()).copied().map(|r| r.rank))
+                })
+                .max();
+
+            if let Some(max) = max_component_parent {
+                for &node in component {
+                    ranks.insert(
+                        node,
+                        Rank {
+                            rank: max + 1,
+                            component: component_id,
+                        },
+                    );
+                }
+            } else {
+                for &node in component {
+                    ranks.insert(
+                        node,
+                        Rank {
+                            rank: 0,
+                            component: component_id,
+                        },
+                    );
+                }
+            }
+        }
+        ranks
+    }
+}
+
+#[derive(Debug)]
+struct NeedsEntry {
+    item: ItemKey,
+    node: ProductionNodeIndex,
+    rate: ItemsPerMinute,
+}
 
 struct DotGraphFmt<'a> {
     graph: &'a ProductionGraph,

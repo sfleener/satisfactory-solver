@@ -18,10 +18,14 @@ pub enum RecipeKind {}
 pub enum ItemKind {}
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum MachineKind {}
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum NameKind {}
 
 pub type RecipeKey = Key<RecipeKind>;
 pub type ItemKey = Key<ItemKind>;
 pub type MachineKey = Key<MachineKind>;
+
+pub type Name = Key<NameKind>;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Key<T>(Spur, PhantomData<fn() -> T>);
@@ -142,7 +146,7 @@ pub struct Data {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Item {
-    pub name: String,
+    pub name: Name,
     pub energy: Option<Rat<Megawatts>>,
     pub form: Option<Form>,
     pub points: Rat<Points>,
@@ -162,7 +166,7 @@ pub enum Form {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Resource {
-    pub name: String,
+    pub name: Name,
     pub energy: Rat<Megawatts>,
     pub form: Form,
     pub points: Rat<Points>,
@@ -171,7 +175,7 @@ pub struct Resource {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct RawRecipe {
-    pub name: String,
+    pub name: Name,
     pub time: Rat<Per<Second, Recipes>>,
     pub ingredients: Vec<RawRecipeItem>,
     pub products: Vec<RawRecipeItem>,
@@ -189,7 +193,7 @@ struct RawRecipeItem {
 #[derive(Debug)]
 pub struct Recipe {
     raw: RawRecipe,
-    pub name: String,
+    pub name: Name,
     pub ingredients: Vec<RecipeItem>,
     pub products: Vec<RecipeItem>,
     pub machine: MachineKey,
@@ -248,7 +252,7 @@ pub struct RecipeItem {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Machine {
-    pub name: String,
+    pub name: Name,
     pub power_use: f64,
     pub power_produced: f64,
 }

@@ -1,4 +1,4 @@
-use crate::data::{Data, Form, ItemKey, MachineKey, RecipeKey, Settings};
+use crate::data::{Data, Form, ItemKey, MachineKey, Name, RecipeKey, Settings};
 use crate::rational::units::{Megawatts, Points, Recipes, Unitless};
 use crate::rational::{ItemsPerMinute, Rat};
 use good_lp::{
@@ -724,8 +724,6 @@ impl SolvedProblem {
             resources: self.solution.value(self.vars.resource_use),
             buildings_scaled: self.solution.value(self.vars.buildings_scaled),
             resources_scaled: self.solution.value(self.vars.resources_scaled),
-            products_map,
-            ingredients_map,
         }
     }
 }
@@ -733,11 +731,11 @@ impl SolvedProblem {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SolutionValues {
     pub sink_points: Rat<Points>,
-    pub items_input: BTreeMap<ItemKey, (String, ItemsPerMinute)>,
-    pub items_output: BTreeMap<ItemKey, (String, ItemsPerMinute)>,
-    pub resources_needed: BTreeMap<ItemKey, (String, ItemsPerMinute)>,
-    pub items_needed: BTreeMap<ItemKey, (String, ItemsPerMinute)>,
-    pub recipes_used: BTreeMap<RecipeKey, (String, Rat<Recipes>)>,
+    pub items_input: BTreeMap<ItemKey, (Name, ItemsPerMinute)>,
+    pub items_output: BTreeMap<ItemKey, (Name, ItemsPerMinute)>,
+    pub resources_needed: BTreeMap<ItemKey, (Name, ItemsPerMinute)>,
+    pub items_needed: BTreeMap<ItemKey, (Name, ItemsPerMinute)>,
+    pub recipes_used: BTreeMap<RecipeKey, (Name, Rat<Recipes>)>,
     pub power_produced: BTreeMap<ItemKey, Rat<Megawatts>>,
 
     pub power_use: f64,
@@ -746,7 +744,4 @@ pub struct SolutionValues {
     pub resources: f64,
     pub buildings_scaled: f64,
     pub resources_scaled: f64,
-
-    pub products_map: BTreeMap<String, BTreeMap<String, ItemsPerMinute>>,
-    pub ingredients_map: BTreeMap<String, BTreeMap<String, ItemsPerMinute>>,
 }
