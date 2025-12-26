@@ -24,6 +24,12 @@ type PreparedProblem = good_lp::solvers::coin_cbc::CoinCbcProblem;
 #[cfg(all(feature = "cbc", not(feature = "scip")))]
 static SOLVER_FN: fn(variable::UnsolvedProblem) -> PreparedProblem =
     good_lp::solvers::coin_cbc::coin_cbc;
+#[cfg(all(feature = "microlp", not(feature = "scip")))]
+type PreparedProblem = good_lp::solvers::microlp::MicroLpProblem;
+#[cfg(all(feature = "microlp", not(feature = "scip")))]
+static SOLVER_FN: fn(variable::UnsolvedProblem) -> PreparedProblem =
+    good_lp::solvers::microlp::microlp;
+
 
 const MAX_SINGLE_RECIPE: i32 = 1000;
 
