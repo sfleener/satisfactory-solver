@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::Sum;
 use std::marker::PhantomData as Boo;
-use std::ops::{Add, AddAssign, Div, Mul, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
 pub mod units {
     use derive_more::Display;
@@ -102,6 +102,10 @@ impl<Unit> Rat<Unit> {
     pub fn is_near_zero(&self) -> bool {
         let epsilon = Self::new(1, 100);
         *self <= epsilon
+    }
+
+    pub fn reduce(&mut self) {
+        self.0 = self.0.reduced()
     }
 
     pub fn reduced(&self) -> Rat<Unit> {
@@ -271,9 +275,9 @@ impl<U> Add<Rat<U>> for Rat<U> {
     }
 }
 
-impl<U: Copy> AddAssign<Rat<U>> for Rat<U> {
+impl<U> AddAssign<Rat<U>> for Rat<U> {
     fn add_assign(&mut self, rhs: Rat<U>) {
-        *self = *self + rhs;
+        self.0 += rhs.0
     }
 }
 
@@ -288,6 +292,12 @@ impl<U> Sub<Rat<U>> for Rat<U> {
 
     fn sub(self, rhs: Rat<U>) -> Self::Output {
         Self(self.0 - rhs.0, Boo)
+    }
+}
+
+impl<U> SubAssign<Rat<U>> for Rat<U> {
+    fn sub_assign(&mut self, rhs: Rat<U>) {
+        self.0 -= rhs.0
     }
 }
 

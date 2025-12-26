@@ -8,9 +8,8 @@ use itertools::Itertools;
 use petgraph::Direction;
 use petgraph::data::DataMap;
 use petgraph::dot::Dot;
-use petgraph::graph::{DiGraph, EdgeIndex, NodeIndex};
+use petgraph::graph::{DiGraph, EdgeIndex, EdgeReference, NodeIndex};
 use petgraph::visit::{EdgeRef, IntoEdgesDirected, Walker};
-use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
@@ -23,7 +22,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     let recipe_nodes = graph.add_recipe_nodes(data, values);
     let input_nodes = graph.add_input_nodes(values);
 
-    let mut needs = graph.add_base_needs(settings, values);
+    let mut needs_queue = graph.add_base_needs(settings, values);
 
     let mut provides_recipes: BTreeMap<_, BTreeMap<_, _>> = BTreeMap::new();
     for (k, RecipeNode { amount: v, .. }) in &recipe_nodes {
@@ -35,14 +34,14 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             provides_recipes
                 .entry(product.item)
                 .or_default()
-                .insert(**k, (amount_per_recipe, amount));
+                .insert(*k, (amount_per_recipe, amount));
         }
 
         for ingredient in &recipe.ingredients {
             let amount_per_recipe = ingredient.amount;
             let rate = amount_per_recipe * *v;
             println!("Adding {k} needs {rate:?} {}", ingredient.item);
-            needs.push_back(NeedsEntry {
+            needs_queue.push_back(NeedsEntry {
                 item: ingredient.item,
                 node: recipe_nodes[k].node,
                 rate,
@@ -55,120 +54,65 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         provides_inputs.insert(*k, (input_nodes[k], *amount));
     }
 
-    println!("{needs:?}");
+    println!("{needs_queue:?}");
 
     let mut needs_resources: BTreeMap<_, Vec<_>> = BTreeMap::new();
 
-    while let Some(NeedsEntry {
-        item: needs_key,
-        node: needs_node,
-        rate: mut needs_rate,
-    }) = needs.pop_front()
-    {
+    while let Some(mut needs) = needs_queue.pop_front() {
         println!(
-            "checking {:?} needs {needs_rate:?} of {needs_key}",
-            graph.node_weight(needs_node)
+            "checking {:?} needs {:?} of {}",
+            graph.get_node(needs.node),
+            needs.rate,
+            needs.item,
         );
-        if data.resources.contains_key(&needs_key) {
+        if data.resources.contains_key(&needs.item) {
             println!("Is resource, checking after");
             needs_resources
-                .entry(needs_key)
+                .entry(needs.item)
                 .or_default()
-                .push((needs_node, needs_rate));
+                .push((needs.node, needs.rate));
             continue;
         }
 
         assert!(
-            !needs_rate.is_near_zero(),
-            "Non-zero needs remaining: {needs_rate:?}"
+            !needs.rate.is_near_zero(),
+            "Non-zero needs remaining: {:?}",
+            needs.rate
         );
-        if let Some((provides_node, provides_amount)) = provides_inputs.get_mut(&needs_key)
-            && !provides_amount.is_near_zero()
+        if let Some((provides_node, provides_rate)) = provides_inputs.get_mut(&needs.item)
+            && !provides_rate.is_near_zero()
         {
-            let edge = graph.get_or_insert_edge(
-                *provides_node,
-                needs_node,
-                BeltKind::Items {
-                    item: needs_key,
-                    rate: Rat::ZERO,
-                },
-            );
+            graph.update_needs(&mut needs, *provides_node, provides_rate);
 
-            let BeltKind::Items {
-                item: _,
-                rate: edge_amount,
-            } = graph.edge_weight_mut(edge).unwrap()
-            else {
-                unreachable!()
-            };
-
-            let difference = if *provides_amount >= needs_rate {
-                let difference = *edge_amount + needs_rate;
-                *provides_amount = *provides_amount - needs_rate;
-                needs_rate = Rat::ZERO;
-                difference
-            } else {
-                let difference = *edge_amount + *provides_amount;
-                needs_rate = needs_rate - *provides_amount;
-                *provides_amount = Rat::ZERO;
-                difference
-            };
-
-            *edge_amount += difference;
-
-            if needs_rate.is_near_zero() {
+            if needs.rate.is_near_zero() {
                 continue;
             }
         }
 
-        let Some(provides) = provides_recipes.get_mut(&needs_key) else {
+        let Some(provides) = provides_recipes.get_mut(&needs.item) else {
             panic!(
-                "No recipes remaining that provide {needs_rate:?} {needs_key}: {provides_recipes:?}\n{:?}",
-                Dot::new(&graph)
+                "No recipes remaining that provide {:?} {}: {provides_recipes:?}\n{:?}",
+                needs.rate,
+                needs.item,
+                graph.as_dot(),
             );
         };
         assert!(!provides.is_empty());
         let mut to_remove = vec![];
         for (provides_key, (_, provides_amount)) in &mut *provides {
             assert!(!provides_amount.is_near_zero());
-            let (provides_node, _, _) = recipe_nodes.get(provides_key).unwrap();
+            let RecipeNode {
+                node: provides_node,
+                ..
+            } = recipe_nodes.get(provides_key).unwrap();
 
-            let edge = graph.get_or_insert_edge(
-                *provides_node,
-                needs_node,
-                BeltKind::Items {
-                    item: needs_key,
-                    rate: Rat::ZERO,
-                },
-            );
-
-            let BeltKind::Items {
-                item: _,
-                rate: edge_amount,
-            } = graph.edge_weight_mut(edge).unwrap()
-            else {
-                unreachable!()
-            };
-
-            let difference = if *provides_amount >= needs_rate {
-                let difference = *edge_amount + needs_rate;
-                *provides_amount = *provides_amount - needs_rate;
-                needs_rate = Rat::ZERO;
-                difference
-            } else {
-                let difference = *edge_amount + *provides_amount;
-                needs_rate = needs_rate - *provides_amount;
-                *provides_amount = Rat::ZERO;
-                difference
-            };
-
-            *edge_amount += difference;
+            graph.update_needs(&mut needs, *provides_node, provides_amount);
 
             if provides_amount.is_near_zero() {
                 to_remove.push(*provides_key);
             }
 
-            if needs_rate.is_near_zero() {
+            if needs.rate.is_near_zero() {
                 break;
             }
         }
@@ -176,10 +120,11 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             provides.remove(&r);
         }
         if provides.is_empty() {
-            provides_recipes.remove(&needs_key);
+            provides_recipes.remove(&needs.item);
         }
-        if !needs_rate.is_near_zero() {
-            needs.push_back((needs_key, (needs_node, needs_rate.reduced())));
+        if !needs.rate.is_near_zero() {
+            needs.rate.reduce();
+            needs_queue.push_back(needs);
         }
     }
 
@@ -189,7 +134,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                 "Needed resource {:?}: {} {:?}",
                 needs_key,
                 needs_amount,
-                graph.node_weight(needs_node)
+                graph.get_node(needs_node)
             );
 
             let new_value = needs_amount / ItemsPerMinutePerRecipe::ONE;
@@ -200,16 +145,8 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     data.resources.get(&needs_key).unwrap().name.clone(),
                 )
             });
-            let weight = &mut graph.node_weight_mut(resource_node).unwrap().0;
-            *weight = *weight + new_value;
-            graph.add_edge(
-                resource_node,
-                needs_node,
-                BeltKind::Items {
-                    item: needs_key,
-                    rate: needs_amount,
-                },
-            );
+            graph.increase_node_amount(resource_node, new_value);
+            graph.add_edge(resource_node, needs_node, needs_key, needs_amount);
         }
     }
 
@@ -229,34 +166,24 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
     let ranks = graph.deduce_ranks();
 
     {
-        for node in graph.node_indices() {
+        for node in graph.node_ids() {
             if graph.is_output(node) {
                 continue;
             }
             if ranks[&node].rank == 0 {
                 continue;
             }
-            if graph
-                .edges_directed(node, Direction::Outgoing)
-                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                .count()
-                != 1
-            {
+            if graph.outgoing_edges(node).count() != 1 {
                 continue;
             }
-            let target = graph
-                .edges_directed(node, Direction::Outgoing)
-                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                .next()
-                .unwrap()
-                .target();
+            let target = graph.outgoing_edges(node).next().unwrap().target();
             if graph.is_output(target) {
                 continue;
             }
             let node_rank = ranks.get(&node).unwrap_or_else(|| {
                 let nodes = graph
-                    .node_indices()
-                    .map(|i| (i, graph.node_weight(i)))
+                    .node_ids()
+                    .map(|i| (i, graph.get_node(i)))
                     .collect::<Vec<_>>();
                 panic!(
                     "Rank not found for node {node:?}\n\nnodes: {nodes:?}\n\nranks: {ranks:?}\n\n"
@@ -266,7 +193,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             if node_rank >= target_rank {
                 continue;
             }
-            graph.add_edge(target, node, BeltKind::InlineLink);
+            graph.add_backlink(node, target);
         }
     }
 
@@ -275,16 +202,10 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
 
     // assert ranks are well-ordered
     for (&node, &rank) in &ranks {
-        for outgoing in graph
-            .edges_directed(node, Direction::Outgoing)
-            .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-        {
+        for outgoing in graph.outgoing_edges(node) {
             assert_le!(rank, ranks[&outgoing.target()]);
         }
-        for incoming in graph
-            .edges_directed(node, Direction::Incoming)
-            .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-        {
+        for incoming in graph.incoming_edges(node) {
             assert_ge!(rank, ranks[&incoming.target()]);
         }
     }
@@ -303,15 +224,13 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
         {
             if c_id.is_none() {
                 for (&node, _) in component {
-                    let (amount, name) = graph.node_weight(node).unwrap();
+                    let ProductionNode { amount, name } = graph.get_node(node).unwrap();
                     let incoming = graph
-                        .edges_directed(node, Direction::Incoming)
-                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                        .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
+                        .incoming_edges(node)
+                        .map(|edge| &graph.get_node(edge.source()).unwrap().name)
                         .collect::<BTreeSet<_>>();
                     let outgoing = graph
-                        .edges_directed(node, Direction::Outgoing)
-                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                        .outgoing_edges(node)
                         .map(|edge| ranks.get(&edge.target()).unwrap().rank)
                         .collect::<BTreeSet<_>>();
                     println!(
@@ -320,68 +239,59 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     );
                 }
             } else {
-                let component_nodes = component
-                    .into_iter()
-                    .map(|(i, _)| GlobalNodeIndex::Node(*i))
-                    .collect::<Vec<_>>();
+                let component_nodes = component.into_iter().collect::<Vec<_>>();
                 // println!(
                 //     ">>>>>>{:?}",
                 //     component_nodes
                 //         .iter()
-                //         .map(|i| graph.node_weight(i.id()).unwrap().1.clone())
+                //         .map(|i| graph.get_node(i.id()).unwrap().1.clone())
                 //         .collect::<Vec<_>>()
                 // );
 
                 let mut local = ComponentGraph::new();
-                let local_root = LocalNodeIndex(local.add_node(GlobalNodeIndex::Root));
                 let mut local_nodes = BiBTreeMap::from_iter(
                     component_nodes
                         .iter()
                         .copied()
-                        .map(|i| (i, LocalNodeIndex(local.add_node(i)))),
+                        .map(|(&i, _)| (GlobalNodeIndex::Node(i), local.add_node(i))),
                 );
-                local_nodes.insert(GlobalNodeIndex::Root, local_root);
-                for &id in &component_nodes {
-                    let local_id = local_nodes.get_by_left(&id).unwrap();
+                local_nodes.insert(GlobalNodeIndex::Root, local.root);
+                for &(&id, _) in &component_nodes {
+                    let &local_id = local_nodes.get_by_left(&GlobalNodeIndex::Node(id)).unwrap();
                     let mut has_outgoing = false;
-                    for edge in graph
-                        .edges_directed(id.id(), Direction::Outgoing)
-                        .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                    {
-                        let Some(target) =
+                    for edge in graph.outgoing_edges(id) {
+                        let Some(&target) =
                             local_nodes.get_by_left(&GlobalNodeIndex::Node(edge.target()))
                         else {
                             continue;
                         };
-                        local.add_edge(target.0, local_id.0, ());
+                        local.add_edge(target, local_id);
                         has_outgoing = true;
                     }
 
                     if !has_outgoing {
-                        local.add_edge(local_root.0, local_id.0, ());
+                        local.add_edge(local.root(), local_id);
                     }
                 }
 
                 fn tree<'a>(
-                    local_node: LocalNodeIndex,
-                    ranks: &BTreeMap<NodeIndex, Rank>,
-                    local_nodes: &BiBTreeMap<GlobalNodeIndex, LocalNodeIndex>,
+                    local_node: ComponentNodeIndex,
+                    ranks: &BTreeMap<ProductionNodeIndex, Rank>,
+                    local_nodes: &BiBTreeMap<GlobalNodeIndex, ComponentNodeIndex>,
                     graph: &'a ProductionGraph,
-                    local_graph: &DiGraph<GlobalNodeIndex, ()>,
-                    visited: &mut BTreeSet<LocalNodeIndex>,
+                    local_graph: &ComponentGraph,
+                    visited: &mut BTreeSet<ComponentNodeIndex>,
                 ) -> Tree<String> {
                     let global_node = *local_nodes.get_by_right(&local_node).unwrap();
                     let s = match global_node {
                         GlobalNodeIndex::Node(node) => {
-                            let (amount, name) = graph.node_weight(node).unwrap();
+                            let ProductionNode { amount, name } = graph.get_node(node).unwrap();
                             let incoming = graph
-                                .edges_directed(node, Direction::Incoming)
-                                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                                .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
+                                .incoming_edges(node)
+                                .map(|edge| &graph.get_node(edge.source()).unwrap().name)
                                 .collect::<BTreeSet<_>>();
                             let outgoing = graph
-                                .edges_directed(node, Direction::Outgoing)
-                                .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                                .outgoing_edges(node)
                                 .map(|edge| ranks.get(&edge.target()).unwrap().rank)
                                 .collect::<BTreeSet<_>>();
                             format!(
@@ -393,8 +303,8 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     };
 
                     let mut t = Tree::new(s);
-                    for edge in local_graph.edges_directed(local_node.0, Direction::Outgoing) {
-                        let new = LocalNodeIndex(edge.target());
+                    for edge in local_graph.outgoing_edges(local_node) {
+                        let new = edge.target();
                         if visited.contains(&new) {
                             continue;
                         }
@@ -408,11 +318,10 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     tree.leaves.iter().map(|l| tree_len(l)).sum::<usize>() + 1
                 }
 
-                let tree = if petgraph::algo::is_cyclic_directed(&local) {
+                let tree = if local.is_cyclic() {
                     let mut root = Tree::new("Cyclic Group".to_string());
-                    for local_node in local.node_indices() {
-                        let local_node = LocalNodeIndex(local_node);
-                        if local_node == local_root {
+                    for local_node in local.node_ids() {
+                        if local_node == local.root() {
                             continue;
                         }
                         let GlobalNodeIndex::Node(node) =
@@ -421,15 +330,13 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                             unreachable!()
                         };
 
-                        let (amount, name) = graph.node_weight(node).unwrap();
+                        let ProductionNode { amount, name } = graph.get_node(node).unwrap();
                         let incoming = graph
-                            .edges_directed(node, Direction::Incoming)
-                            .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                            .map(|edge| &graph.node_weight(edge.source()).unwrap().1)
+                            .incoming_edges(node)
+                            .map(|edge| &graph.get_node(edge.source()).unwrap().name)
                             .collect::<BTreeSet<_>>();
                         let outgoing = graph
-                            .edges_directed(node, Direction::Outgoing)
-                            .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+                            .outgoing_edges(node)
                             .map(|edge| ranks.get(&edge.target()).unwrap().rank)
                             .collect::<BTreeSet<_>>();
                         let s = format!(
@@ -441,7 +348,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     root
                 } else {
                     let tree = tree(
-                        local_root,
+                        local.root(),
                         &ranks,
                         &local_nodes,
                         &graph,
@@ -476,27 +383,70 @@ enum BeltKind {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 enum GlobalNodeIndex {
-    Node(NodeIndex),
+    Node(ProductionNodeIndex),
     Root,
 }
 impl GlobalNodeIndex {
-    fn id(self) -> NodeIndex {
+    fn id(self) -> ProductionNodeIndex {
         let Self::Node(id) = self else { panic!() };
         id
     }
 }
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-struct LocalNodeIndex(NodeIndex);
+struct ComponentNodeIndex(NodeIndex);
+
+#[derive(Debug, Clone, Copy)]
+struct ComponentEdgeReference<'a>(EdgeReference<'a, ()>);
+
+impl ComponentEdgeReference<'_> {
+    fn source(self) -> ComponentNodeIndex {
+        ComponentNodeIndex(self.0.source())
+    }
+
+    fn target(self) -> ComponentNodeIndex {
+        ComponentNodeIndex(self.0.target())
+    }
+}
 
 struct ComponentGraph {
     inner: DiGraph<GlobalNodeIndex, ()>,
+    root: ComponentNodeIndex,
 }
 
 impl ComponentGraph {
     fn new() -> Self {
-        Self {
-            inner: DiGraph::new(),
-        }
+        let mut inner = DiGraph::new();
+        let root = ComponentNodeIndex(inner.add_node(GlobalNodeIndex::Root));
+        Self { inner, root }
+    }
+
+    fn root(&self) -> ComponentNodeIndex {
+        self.root
+    }
+
+    fn is_cyclic(&self) -> bool {
+        petgraph::algo::is_cyclic_directed(&self.inner)
+    }
+
+    fn add_node(&mut self, node: ProductionNodeIndex) -> ComponentNodeIndex {
+        ComponentNodeIndex(self.inner.add_node(GlobalNodeIndex::Node(node)))
+    }
+
+    fn add_edge(&mut self, src: ComponentNodeIndex, dst: ComponentNodeIndex) {
+        self.inner.add_edge(src.0, dst.0, ());
+    }
+
+    fn node_ids(&self) -> impl Iterator<Item = ComponentNodeIndex> + use<> {
+        self.inner.node_indices().map(|i| ComponentNodeIndex(i))
+    }
+
+    fn outgoing_edges<'a>(
+        &'a self,
+        node: ComponentNodeIndex,
+    ) -> impl Iterator<Item = ComponentEdgeReference<'a>> + use<'a> {
+        self.inner
+            .edges_directed(node.0, Direction::Outgoing)
+            .map(|e| ComponentEdgeReference(e))
     }
 }
 
@@ -506,12 +456,38 @@ struct Rank {
     component: Option<u8>,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct ProductionNodeIndex(NodeIndex);
 
+impl ProductionNodeIndex {
+    fn index(self) -> usize {
+        self.0.index()
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ProductionEdgeReference<'a>(EdgeReference<'a, BeltKind>);
+
+impl ProductionEdgeReference<'_> {
+    fn source(self) -> ProductionNodeIndex {
+        ProductionNodeIndex(self.0.source())
+    }
+
+    fn target(self) -> ProductionNodeIndex {
+        ProductionNodeIndex(self.0.target())
+    }
+}
+
+#[derive(Debug)]
 struct ProductionNode {
     amount: Rat<Recipes>,
     name: Name,
+}
+
+impl Display for ProductionNode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.amount, self.name)
+    }
 }
 
 struct RecipeNode {
@@ -606,34 +582,105 @@ impl ProductionGraph {
         needs
     }
 
-    fn get_or_insert_edge(
+    fn outgoing_edges<'a>(
+        &'a self,
+        node: ProductionNodeIndex,
+    ) -> impl Iterator<Item = ProductionEdgeReference<'a>> + use<'a> {
+        self.edges(node, Direction::Outgoing)
+    }
+
+    fn incoming_edges<'a>(
+        &'a self,
+        node: ProductionNodeIndex,
+    ) -> impl Iterator<Item = ProductionEdgeReference<'a>> + use<'a> {
+        self.edges(node, Direction::Incoming)
+    }
+
+    fn edges<'a>(
+        &'a self,
+        node: ProductionNodeIndex,
+        direction: Direction,
+    ) -> impl Iterator<Item = ProductionEdgeReference<'a>> + use<'a> {
+        self.inner
+            .edges_directed(node.0, direction)
+            .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
+            .map(|e| ProductionEdgeReference(e))
+    }
+
+    fn add_edge(
         &mut self,
         src: ProductionNodeIndex,
         dst: ProductionNodeIndex,
-        default: BeltKind,
+        item: ItemKey,
+        rate: ItemsPerMinute,
+    ) -> EdgeIndex {
+        self.inner
+            .add_edge(src.0, dst.0, BeltKind::Items { item, rate })
+    }
+
+    fn get_or_insert_default_edge(
+        &mut self,
+        src: ProductionNodeIndex,
+        dst: ProductionNodeIndex,
+        default_item: ItemKey,
     ) -> EdgeIndex {
         if let Some(e) = self.inner.find_edge(src.0, dst.0) {
             e
         } else {
-            self.inner.add_edge(src.0, dst.0, default)
+            self.add_edge(src, dst, default_item, Rat::ZERO)
         }
     }
 
-    fn get_or_insert_edge_with(
+    fn node_ids(&self) -> impl Iterator<Item = ProductionNodeIndex> + use<> {
+        self.inner.node_indices().map(|i| ProductionNodeIndex(i))
+    }
+
+    fn get_node(&self, node: ProductionNodeIndex) -> Option<&ProductionNode> {
+        self.inner.node_weight(node.0)
+    }
+
+    fn add_backlink(&mut self, src: ProductionNodeIndex, dst: ProductionNodeIndex) {
+        self.inner.add_edge(dst.0, src.0, BeltKind::InlineLink);
+    }
+
+    fn update_needs(
         &mut self,
-        src: ProductionNodeIndex,
-        dst: ProductionNodeIndex,
-        default: impl FnOnce() -> BeltKind,
-    ) -> EdgeIndex {
-        if let Some(e) = self.inner.find_edge(src.0, dst.0) {
-            e
+        needs: &mut NeedsEntry,
+        provides_node: ProductionNodeIndex,
+        provides_rate: &mut ItemsPerMinute,
+    ) {
+        let edge = self.get_or_insert_default_edge(provides_node, needs.node, needs.item);
+
+        let BeltKind::Items {
+            item: _,
+            rate: edge_amount,
+        } = self.inner.edge_weight_mut(edge).unwrap()
+        else {
+            unreachable!()
+        };
+
+        let difference = if *provides_rate >= needs.rate {
+            let difference = *edge_amount + needs.rate;
+            *provides_rate -= needs.rate;
+            needs.rate = Rat::ZERO;
+            difference
         } else {
-            self.inner.add_edge(src.0, dst.0, default())
-        }
+            let difference = *edge_amount + *provides_rate;
+            needs.rate -= *provides_rate;
+            *provides_rate = Rat::ZERO;
+            difference
+        };
+
+        *edge_amount += difference;
     }
 
-    fn deduce_ranks(&self) -> BTreeMap<NodeIndex, Rank> {
-        let mut ranks = BTreeMap::<_, Rank>::new();
+    fn increase_node_amount(&mut self, node: ProductionNodeIndex, delta: Rat<Recipes>) {
+        let weight = &mut self.inner.node_weight_mut(node.0).unwrap().amount;
+        *weight += delta;
+    }
+
+    fn deduce_ranks(&self) -> BTreeMap<ProductionNodeIndex, Rank> {
+        let mut ranks: BTreeMap<ProductionNodeIndex, _> = BTreeMap::<_, Rank>::new();
         let components = petgraph::algo::tarjan_scc(&self.inner);
 
         let mut next_component_id = 0;
@@ -649,10 +696,10 @@ impl ProductionGraph {
                 next_component_id += 1;
                 Some(id)
             };
-            let component_nodes = component
-                .iter()
-                .map(|i| &self.inner.node_weight(*i).unwrap())
-                .collect::<Vec<_>>();
+            // let component_nodes = component
+            //     .iter()
+            //     .map(|i| &self.inner.node_weight(*i).unwrap())
+            //     .collect::<Vec<_>>();
             // println!("Component: {component_nodes:?}");
 
             let max_component_parent = component
@@ -661,14 +708,19 @@ impl ProductionGraph {
                     self.inner
                         .edges_directed(node, Direction::Incoming)
                         .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-                        .filter_map(|edge| ranks.get(&edge.source()).copied().map(|r| r.rank))
+                        .filter_map(|edge| {
+                            ranks
+                                .get(&ProductionNodeIndex(edge.source()))
+                                .copied()
+                                .map(|r| r.rank)
+                        })
                 })
                 .max();
 
             if let Some(max) = max_component_parent {
                 for &node in component {
                     ranks.insert(
-                        node,
+                        ProductionNodeIndex(node),
                         Rank {
                             rank: max + 1,
                             component: component_id,
@@ -678,7 +730,7 @@ impl ProductionGraph {
             } else {
                 for &node in component {
                     ranks.insert(
-                        node,
+                        ProductionNodeIndex(node),
                         Rank {
                             rank: 0,
                             component: component_id,
@@ -688,6 +740,10 @@ impl ProductionGraph {
             }
         }
         ranks
+    }
+
+    fn as_dot<'a>(&'a self) -> Dot<'_, &'a DiGraph<ProductionNode, BeltKind>> {
+        Dot::new(&self.inner)
     }
 }
 
@@ -700,9 +756,9 @@ struct NeedsEntry {
 
 struct DotGraphFmt<'a> {
     graph: &'a ProductionGraph,
-    ranks: &'a BTreeMap<NodeIndex, Rank>,
+    ranks: &'a BTreeMap<ProductionNodeIndex, Rank>,
     data: &'a Data,
-    extra_inputs: &'a BTreeMap<ItemKey, (NodeIndex, ItemsPerMinute)>,
+    extra_inputs: &'a BTreeMap<ItemKey, (ProductionNodeIndex, ItemsPerMinute)>,
     extras: &'a BTreeMap<ItemKey, BTreeMap<RecipeKey, (ItemsPerMinutePerRecipe, ItemsPerMinute)>>,
 }
 
@@ -718,12 +774,12 @@ impl Debug for DotGraphFmt<'_> {
         for (rank, nodes) in reverse_ranks {
             writeln!(f, "  subgraph L{}", rank.rank)?;
 
-            for node in nodes {
-                let (count, name) = self.graph.node_weight(node).unwrap();
-                if count.is_near_zero() {
-                    writeln!(f, "    {}[{}]", node.index(), name)?;
+            for id in nodes {
+                let node = self.graph.get_node(id).unwrap();
+                if node.amount.is_near_zero() {
+                    writeln!(f, "    {}[{}]", id.index(), node.name)?;
                 } else {
-                    writeln!(f, "    {}[{:?} {}]", node.index(), count, name,)?;
+                    writeln!(f, "    {}[{:?} {}]", id.index(), node.amount, node.name)?;
                 }
             }
 
@@ -755,7 +811,7 @@ impl Debug for DotGraphFmt<'_> {
         }
         writeln!(f, "  end")?;
 
-        for edge in self.graph.edge_references() {
+        for edge in self.graph.inner.edge_references() {
             match edge.weight() {
                 BeltKind::Items { item, rate } => {
                     writeln!(
