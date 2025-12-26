@@ -219,7 +219,7 @@ impl<'de> Deserialize<'de> for Recipe {
         let time = raw.time.recip().to_per_minute().recip();
 
         Ok(Recipe {
-            name: raw.name.clone(),
+            name: raw.name,
             ingredients: raw
                 .ingredients
                 .iter()

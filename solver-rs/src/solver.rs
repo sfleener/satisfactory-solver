@@ -31,7 +31,6 @@ struct Keys {
     resources: BTreeSet<ItemKey>,
     recipes: BTreeSet<RecipeKey>,
     products: BTreeSet<ItemKey>,
-    ingredients: BTreeSet<ItemKey>,
     all_items: BTreeSet<ItemKey>,
 }
 
@@ -69,7 +68,6 @@ fn extract_items(raw_data: &Data) -> Keys {
         resources,
         recipes,
         products,
-        ingredients,
         all_items,
     }
 }
@@ -105,12 +103,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn define(
-        settings: &Settings,
-        data: &Data,
-        all_items: &BTreeSet<ItemKey>,
-        recipe_keys: &BTreeSet<RecipeKey>,
-    ) -> Self {
+    pub fn define(settings: &Settings, data: &Data, all_items: &BTreeSet<ItemKey>) -> Self {
         let mut problem = ProblemVariables::new();
 
         let inputs = problem.add_vector(variable().name("inputs").min(0), all_items.len());
@@ -224,7 +217,7 @@ impl Model {
         let max_item = settings
             .max_item
             .as_ref()
-            .and_then(|i| i.as_str().map(|i| ItemKey::from(i)));
+            .and_then(|i| i.as_str().map(ItemKey::from));
 
         for (item, &amount) in &settings.outputs {
             if max_item.as_ref().is_some_and(|i| i == item) {
@@ -508,7 +501,7 @@ impl Model {
             ),
         };
         let problem = problem
-            .using(|c| SOLVER_FN(c))
+            .using(SOLVER_FN)
             // .with_time_limit(Duration::from_secs(300).as_secs_f64())
             .with_all(self.constraints.clone());
         let variables = Variables {
@@ -540,7 +533,7 @@ pub struct PreparedModel {
 impl PreparedModel {
     pub fn new(data: &Data, settings: &Settings) -> Self {
         let keys = extract_items(data);
-        let mut model = Model::define(settings, data, &keys.all_items, &keys.recipes);
+        let mut model = Model::define(settings, data, &keys.all_items);
         model.fix_input_amounts(settings, &keys.all_items);
         model.fix_output_amount(settings);
         model.fix_extras_amount(settings);
@@ -617,7 +610,7 @@ impl SolvedProblem {
             .filter_map(|(k, _)| self.vars.items.get(k).map(|v| (k, self.solution.value(*v))))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| settings.resource_limits.contains_key(*k))
-            .map(|(k, v)| (*k, (data.resources[k].name.clone(), v.into())))
+            .map(|(k, v)| (*k, (data.resources[k].name, v.into())))
             .collect();
 
         let items_needed = data
@@ -626,7 +619,7 @@ impl SolvedProblem {
             .filter_map(|(k, _)| self.vars.items.get(k).map(|v| (k, self.solution.value(*v))))
             .filter(|(_, v)| *v > EPSILON)
             .filter(|(k, _)| !settings.resource_limits.contains_key(*k))
-            .map(|(k, v)| (*k, (data.items[k].name.clone(), v.into())))
+            .map(|(k, v)| (*k, (data.items[k].name, v.into())))
             .collect();
 
         let mut products_map = BTreeMap::new();
@@ -639,7 +632,7 @@ impl SolvedProblem {
             let key = data
                 .items
                 .get(item)
-                .map_or_else(|| data.resources[item].name.clone(), |i| i.name.clone());
+                .map_or_else(|| data.resources[item].name, |i| i.name);
             let products: &mut BTreeMap<_, _> = products_map.entry(key).or_default();
             for (recipe, var) in &self.vars.recipes {
                 let recipe_val = self.solution.value(*var);
@@ -653,7 +646,7 @@ impl SolvedProblem {
                     }
 
                     let recipe_data = &data.recipes[recipe];
-                    products.insert(recipe_data.name.clone(), ingredient.amount * recipe_val);
+                    products.insert(recipe_data.name, ingredient.amount * recipe_val);
                 }
             }
         }
@@ -667,17 +660,17 @@ impl SolvedProblem {
             let recipe_val = Rat::<Recipes>::from(recipe_val);
 
             let ingredients: &mut BTreeMap<_, _> = ingredients_map
-                .entry(data.recipes[recipe].name.clone())
+                .entry(data.recipes[recipe].name)
                 .or_default();
             for ingredient in &data.recipes[recipe].ingredients {
                 let name = data.items.get(&ingredient.item).map_or_else(
                     || {
                         data.resources
                             .get(&ingredient.item)
-                            .map(|i| i.name.clone())
+                            .map(|i| i.name)
                             .expect("must exist")
                     },
-                    |i| i.name.clone(),
+                    |i| i.name,
                 );
                 ingredients.insert(name, ingredient.amount * recipe_val);
             }
@@ -691,7 +684,7 @@ impl SolvedProblem {
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (*k, (data.items[k].name.clone(), v.into())))
+                .map(|(k, v)| (*k, (data.items[k].name, v.into())))
                 .collect(),
             items_output: self
                 .vars
@@ -699,7 +692,7 @@ impl SolvedProblem {
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (*k, (data.items[k].name.clone(), v.into())))
+                .map(|(k, v)| (*k, (data.items[k].name, v.into())))
                 .collect(),
             resources_needed,
             items_needed,
@@ -709,7 +702,7 @@ impl SolvedProblem {
                 .iter()
                 .map(|(k, v)| (k, self.solution.value(*v)))
                 .filter(|(_, v)| *v > EPSILON)
-                .map(|(k, v)| (*k, (data.recipes[k].name.clone(), v.into())))
+                .map(|(k, v)| (*k, (data.recipes[k].name, v.into())))
                 .collect(),
             power_produced: self
                 .vars

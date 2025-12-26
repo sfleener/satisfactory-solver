@@ -1,9 +1,9 @@
 use crate::data::{Data, Settings};
 use crate::outputs::output_graph;
-use crate::solver::{PreparedModel, SolutionValues};
+use crate::solver::PreparedModel;
 use clap::Parser;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::BufReader;
 use std::path::PathBuf;
 
 mod data;
@@ -35,7 +35,7 @@ fn main() -> eyre::Result<()> {
     } else {
         let solved = PreparedModel::new(&data, &settings).solve()?;
         let values = solved.into_values(&settings, &data);
-        std::fs::write("../phase_5.json", serde_json::to_string(&values)?)?;
+        std::fs::write("sln.json", serde_json::to_string(&values)?)?;
         values
     };
 

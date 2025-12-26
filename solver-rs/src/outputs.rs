@@ -1,18 +1,22 @@
-use crate::data::{Data, ItemKey, Name, Recipe, RecipeKey, Settings};
-use crate::rational::units::Recipes;
-use crate::rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat};
-use crate::solver::SolutionValues;
+use crate::{
+    data::{Data, ItemKey, Name, RecipeKey, Settings},
+    rational::units::Recipes,
+    rational::{ItemsPerMinute, ItemsPerMinutePerRecipe, Rat},
+    solver::SolutionValues,
+};
 use assertables::{assert_ge, assert_le};
 use bimap::BiBTreeMap;
 use itertools::Itertools;
-use petgraph::Direction;
-use petgraph::data::DataMap;
-use petgraph::dot::Dot;
-use petgraph::graph::{DiGraph, EdgeIndex, EdgeReference, NodeIndex};
-use petgraph::visit::{EdgeRef, IntoEdgesDirected, Walker};
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::fmt::{Debug, Display, Formatter};
-use std::sync::Arc;
+use petgraph::{
+    Direction,
+    dot::Dot,
+    graph::{DiGraph, EdgeIndex, EdgeReference, NodeIndex},
+    visit::EdgeRef,
+};
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt::{Debug, Display, Formatter},
+};
 use termtree::Tree;
 
 pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
@@ -140,10 +144,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             let new_value = needs_amount / ItemsPerMinutePerRecipe::ONE;
 
             let resource_node = *resource_nodes.entry(needs_key).or_insert_with(|| {
-                graph.add_node(
-                    Rat::ZERO,
-                    data.resources.get(&needs_key).unwrap().name.clone(),
-                )
+                graph.add_node(Rat::ZERO, data.resources.get(&needs_key).unwrap().name)
             });
             graph.increase_node_amount(resource_node, new_value);
             graph.add_edge(resource_node, needs_node, needs_key, needs_amount);
@@ -156,9 +157,9 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
             let extra: ItemsPerMinute = v.values().map(|(_, a)| *a).sum();
             let name = &data
                 .items
-                .get(&k)
+                .get(k)
                 .map(|i| &i.name)
-                .unwrap_or_else(|| &data.resources[&k].name);
+                .unwrap_or_else(|| &data.resources[k].name);
             println!("Extra {name}: {extra:?}");
         }
     }
@@ -274,11 +275,11 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                     }
                 }
 
-                fn tree<'a>(
+                fn tree(
                     local_node: ComponentNodeIndex,
                     ranks: &BTreeMap<ProductionNodeIndex, Rank>,
                     local_nodes: &BiBTreeMap<GlobalNodeIndex, ComponentNodeIndex>,
-                    graph: &'a ProductionGraph,
+                    graph: &ProductionGraph,
                     local_graph: &ComponentGraph,
                     visited: &mut BTreeSet<ComponentNodeIndex>,
                 ) -> Tree<String> {
@@ -345,6 +346,7 @@ pub fn output_graph(settings: &Settings, data: &Data, values: &SolutionValues) {
                         );
                         root.push(Tree::new(s));
                     }
+                    println!("{:?}", local.dot_writer(&graph));
                     root
                 } else {
                     let tree = tree(
@@ -386,12 +388,6 @@ enum GlobalNodeIndex {
     Node(ProductionNodeIndex),
     Root,
 }
-impl GlobalNodeIndex {
-    fn id(self) -> ProductionNodeIndex {
-        let Self::Node(id) = self else { panic!() };
-        id
-    }
-}
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct ComponentNodeIndex(NodeIndex);
 
@@ -399,10 +395,6 @@ struct ComponentNodeIndex(NodeIndex);
 struct ComponentEdgeReference<'a>(EdgeReference<'a, ()>);
 
 impl ComponentEdgeReference<'_> {
-    fn source(self) -> ComponentNodeIndex {
-        ComponentNodeIndex(self.0.source())
-    }
-
     fn target(self) -> ComponentNodeIndex {
         ComponentNodeIndex(self.0.target())
     }
@@ -437,7 +429,7 @@ impl ComponentGraph {
     }
 
     fn node_ids(&self) -> impl Iterator<Item = ComponentNodeIndex> + use<> {
-        self.inner.node_indices().map(|i| ComponentNodeIndex(i))
+        self.inner.node_indices().map(ComponentNodeIndex)
     }
 
     fn outgoing_edges<'a>(
@@ -446,7 +438,50 @@ impl ComponentGraph {
     ) -> impl Iterator<Item = ComponentEdgeReference<'a>> + use<'a> {
         self.inner
             .edges_directed(node.0, Direction::Outgoing)
-            .map(|e| ComponentEdgeReference(e))
+            .map(ComponentEdgeReference)
+    }
+
+    fn dot_writer<'a>(&'a self, graph: &'a ProductionGraph) -> impl Debug + use<'a> {
+        struct DotWriter<'a> {
+            local: &'a ComponentGraph,
+            graph: &'a ProductionGraph,
+        }
+
+        impl Debug for DotWriter<'_> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                f.write_str("flowchart TD\n")?;
+
+                for node in self.local.node_ids() {
+                    match self.local.inner.node_weight(node.0).unwrap() {
+                        GlobalNodeIndex::Node(n) => {
+                            writeln!(
+                                f,
+                                "  {}[{}]",
+                                node.0.index(),
+                                self.graph.get_node(*n).unwrap().name
+                            )?;
+                        }
+                        GlobalNodeIndex::Root => {}
+                    }
+                }
+                for edge in self.local.inner.edge_references() {
+                    if edge.source() == self.local.root.0 || edge.target() == self.local.root.0 {
+                        continue;
+                    }
+
+                    writeln!(
+                        f,
+                        "  {} --> {}",
+                        edge.target().index(),
+                        edge.source().index()
+                    )?;
+                }
+
+                Ok(())
+            }
+        }
+
+        DotWriter { local: self, graph }
     }
 }
 
@@ -492,17 +527,12 @@ impl Display for ProductionNode {
 
 struct RecipeNode {
     node: ProductionNodeIndex,
-    recipe: Arc<Recipe>,
     amount: Rat<Recipes>,
 }
 
 impl RecipeNode {
-    pub fn new(node: ProductionNodeIndex, recipe: Arc<Recipe>, amount: Rat<Recipes>) -> Self {
-        Self {
-            node,
-            recipe,
-            amount,
-        }
+    pub fn new(node: ProductionNodeIndex, amount: Rat<Recipes>) -> Self {
+        Self { node, amount }
     }
 }
 
@@ -526,10 +556,7 @@ impl ProductionGraph {
     }
 
     fn add_node(&mut self, amount: Rat<Recipes>, name: Name) -> ProductionNodeIndex {
-        ProductionNodeIndex(self.inner.add_node(ProductionNode {
-            amount,
-            name: name.into(),
-        }))
+        ProductionNodeIndex(self.inner.add_node(ProductionNode { amount, name }))
     }
 
     pub fn add_recipe_nodes(
@@ -540,12 +567,9 @@ impl ProductionGraph {
         let mut recipe_nodes = BTreeMap::new();
         for (&recipe_key, &(_, recipe_val)) in &values.recipes_used {
             let recipe = &data.recipes[&recipe_key];
-            let node = self.add_node(recipe_val, recipe.name.clone());
+            let node = self.add_node(recipe_val, recipe.name);
 
-            recipe_nodes.insert(
-                recipe_key,
-                RecipeNode::new(node, recipe.clone(), recipe_val),
-            );
+            recipe_nodes.insert(recipe_key, RecipeNode::new(node, recipe_val));
         }
         recipe_nodes
     }
@@ -604,7 +628,7 @@ impl ProductionGraph {
         self.inner
             .edges_directed(node.0, direction)
             .filter(|e| matches!(e.weight(), BeltKind::Items { .. }))
-            .map(|e| ProductionEdgeReference(e))
+            .map(ProductionEdgeReference)
     }
 
     fn add_edge(
@@ -632,7 +656,7 @@ impl ProductionGraph {
     }
 
     fn node_ids(&self) -> impl Iterator<Item = ProductionNodeIndex> + use<> {
-        self.inner.node_indices().map(|i| ProductionNodeIndex(i))
+        self.inner.node_indices().map(ProductionNodeIndex)
     }
 
     fn get_node(&self, node: ProductionNodeIndex) -> Option<&ProductionNode> {
@@ -742,7 +766,7 @@ impl ProductionGraph {
         ranks
     }
 
-    fn as_dot<'a>(&'a self) -> Dot<'_, &'a DiGraph<ProductionNode, BeltKind>> {
+    fn as_dot(&self) -> Dot<'_, &DiGraph<ProductionNode, BeltKind>> {
         Dot::new(&self.inner)
     }
 }
@@ -794,9 +818,9 @@ impl Debug for DotGraphFmt<'_> {
             let name = &self
                 .data
                 .items
-                .get(&k)
+                .get(k)
                 .map(|i| &i.name)
-                .unwrap_or_else(|| &self.data.resources[&k].name);
+                .unwrap_or_else(|| &self.data.resources[k].name);
             writeln!(f, "    {k}[{extra:?} {name}]",)?;
         }
         for (k, v) in self.extras {
@@ -804,9 +828,9 @@ impl Debug for DotGraphFmt<'_> {
             let name = &self
                 .data
                 .items
-                .get(&k)
+                .get(k)
                 .map(|i| &i.name)
-                .unwrap_or_else(|| &self.data.resources[&k].name);
+                .unwrap_or_else(|| &self.data.resources[k].name);
             writeln!(f, "    {k}[{extra:?} {name}]",)?;
         }
         writeln!(f, "  end")?;
